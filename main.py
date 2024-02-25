@@ -4,7 +4,10 @@ from tkinter.ttk import Treeview
 import json
 from datetime import datetime
 import uuid
+from decimal import Decimal, ROUND_HALF_UP
 
+# Set the desired precision: 8 decimal places
+decimal_places = Decimal('1E-8')
 # Initialize a list to store all history data
 full_history_data = []
 # Dictionary to map Treeview item IDs to trade unique IDs
@@ -84,9 +87,9 @@ def add_trade(trade_data=None, selected_item=None):
             side = side_var.get()  # Get the value from radio button
             date = entries['Date'].get()
             datetime.strptime(date, '%Y-%m-%d')  # Validates date format
-            quantity = float(entries['Quantity'].get())
-            price = float(entries['Price'].get())
-            value = round(quantity * price, 8)
+            quantity = Decimal(entries['Quantity'].get())
+            price = Decimal(entries['Price'].get())
+            value = (quantity * price).quantize(decimal_places, ROUND_HALF_UP)
             trade_id = str(uuid.uuid4()) if not selected_item else treeview_id_to_trade_id[selected_item]
             new_row = [trade_id, pair, side, date, quantity, price, value]
             if selected_item:  # Indicates edit mode
@@ -135,11 +138,11 @@ def update_open_positions():
     for row in full_history_data:
         # Assuming the format is [trade_id, pair, side, date, quantity, price]
         _, pair, side, _, quantity, price = row
-        quantity = float(quantity)
-        price = float(price)
+        quantity = Decimal(str(quantity))
+        price = Decimal(str(price))
 
         if pair not in history:
-            history[pair] = {'trades': [], 'total_pnl': 0, 'total_quantity': 0, 'total_value': 0}
+            history[pair] = {'trades': [], 'total_pnl': Decimal('0'), 'total_quantity': Decimal('0'), 'total_value': Decimal('0')}
 
         # Accumulate quantity and value for buy trades to calculate average buy price
         if side.lower() == 'buy':
@@ -147,8 +150,8 @@ def update_open_positions():
             history[pair]['total_value'] += quantity * price
         elif side.lower() == 'sell' and history[pair]['total_quantity'] > 0:
             # Calculate PnL based on the difference from the average buy price
-            average_buy_price = history[pair]['total_value'] / history[pair]['total_quantity']
-            pnl = (price - average_buy_price) * quantity
+            average_buy_price = (history[pair]['total_value'] / history[pair]['total_quantity']).quantize(decimal_places, ROUND_HALF_UP)
+            pnl = ((price - average_buy_price) * quantity).quantize(decimal_places, ROUND_HALF_UP)
             history[pair]['total_pnl'] += pnl
             # Adjust total quantity and value after sell
             history[pair]['total_quantity'] -= quantity
@@ -157,12 +160,12 @@ def update_open_positions():
 
     for pair, info in history.items():
         total_quantity = info['total_quantity']
-        if total_quantity > 0:
+        if total_quantity > Decimal('0'):
             average_price = info['total_value'] / total_quantity
-            open_positions_table.insert('', 'end', values=(pair, round(total_quantity, 8), round(average_price, 8), round(info['total_value'], 8), round(info['total_pnl'], 8)))
+            open_positions_table.insert('', 'end', values=(pair, total_quantity, average_price, info['total_value'], info['total_pnl']))
         else:
             # If there's no open position, show '-' in quantity, average price, and value columns, but still show the total PnL
-            open_positions_table.insert('', 'end', values=(pair, '-', '-', '-', round(info['total_pnl'], 8)))
+            open_positions_table.insert('', 'end', values=(pair, '-', '-', '-', info['total_pnl']))
 
 
 def edit_trade(event):
@@ -222,8 +225,8 @@ def filter_history(selected_pair):
         # Assuming 'side' is at a specific index, adjust based on your data structure
         side = item[2].lower()  # This should be 'buy' or 'sell', adjust the index as necessary
         # Calculate 'value' if necessary or use existing value
-        quantity, price = float(item[4]), float(item[5])  # Adjust index based on your data structure
-        value = round(quantity * price, 8)
+        quantity, price = Decimal(str(item[4])), Decimal(str(item[5]))  # Adjust index based on your data structure
+        value = (quantity * price).quantize(decimal_places, ROUND_HALF_UP)
         full_row = item + [value]  # Adjust as necessary if 'value' is already included
         # Insert row with appropriate tag for coloring
         item_id = history_table.insert('', 'end', values=full_row[1:], tags=(side,))
