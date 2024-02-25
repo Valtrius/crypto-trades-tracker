@@ -133,7 +133,7 @@ def update_open_positions():
     history = {}
 
     for row in full_history_data:
-        # Assuming the format is [pair, side, date, quantity, price, value]
+        # Assuming the format is [trade_id, pair, side, date, quantity, price]
         _, pair, side, _, quantity, price = row
         # Convert quantity and price to floats
         quantity = float(quantity)
@@ -152,9 +152,9 @@ def update_open_positions():
                 total_quantity -= quantity
                 total_value -= quantity * price
 
-        # Reset total_value if total_quantity is zero to handle scenarios where buys and sells completely offset
-        if total_quantity == 0:
-            total_value = 0
+            # Reset total_value if total_quantity is zero to handle scenarios where buys and sells completely offset
+            if total_quantity == 0:
+                total_value = 0
 
         if total_quantity > 0:
             average_price = total_value / total_quantity
