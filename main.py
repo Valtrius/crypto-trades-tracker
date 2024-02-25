@@ -4,37 +4,32 @@ from tkinter.ttk import Treeview
 import json
 from datetime import datetime
 
+# Initialize a list to store all history data
+full_history_data = []
+
 
 def load_data():
+    global full_history_data
     file_path = filedialog.askopenfilename(filetypes=[("JSON files", "*.json")])
     if file_path:
         with open(file_path, 'r') as file:
-            history_data = json.load(file)
-            for row in history_data:
-                # Convert 'quantity' and 'price' to floats before calculating 'value'
-                quantity = float(row[-2])
-                price = float(row[-1])
-                value = round(quantity * price, 8)  # Recalculate 'value'
-                # Append the calculated 'value' to the row data
-                full_row = row + [value]
-                history_table.insert('', 'end', values=full_row, tags=(row[1].lower(),))  # Adjust tag index based on your structure
+            full_history_data = json.load(file)
+            history_table.delete(*history_table.get_children())  # Clear existing entries
+            for row in full_history_data:
+                # Assuming 'quantity' and 'price' are at specific indices
+                quantity = float(row[3])  # Adjust index based on your data structure
+                price = float(row[4])  # Adjust index based on your data structure
+                value = round(quantity * price, 8)
+                row.append(value)  # Append calculated value
+                history_table.insert('', 'end', values=row, tags=(row[1].lower(),))
             update_open_positions()
 
 
 def save_data():
     file_path = filedialog.asksaveasfilename(defaultextension=".json", filetypes=[("JSON files", "*.json")])
     if file_path:
-        rows = history_table.get_children()
-        # First, extract the data along with the row ID to preserve it for later reordering
-        data_with_id = [(row, history_table.item(row)['values']) for row in rows]
-
-        # Convert the date string to a datetime object for proper comparison, assuming the date is at index 2
-        # Adjust the index if your date is in a different column
-        data_with_id.sort(key=lambda x: datetime.strptime(x[1][2], '%Y-%m-%d'))
-
-        # Exclude the last column (value) from each row and prepare the data to be saved
-        data_to_save = [item[1][:-1] for item in data_with_id]
-
+        # Exclude the last column (value) when saving
+        data_to_save = [row[:-1] for row in full_history_data]
         with open(file_path, 'w') as file:
             json.dump(data_to_save, file)
 
@@ -77,15 +72,16 @@ def add_trade(trade_data=None, selected_item=None, index=None):
             quantity = float(entries['Quantity'].get())
             price = float(entries['Price'].get())
             value = round(quantity * price, 8)
+            new_row = [pair, side, date, quantity, price, value]
             if selected_item:  # Indicates edit mode
-                history_table.delete(selected_item)
-                # Insert at the original position
-                history_table.insert('', index, values=(pair, side, date, quantity, price, value), tags=(side.lower(),))
+                # Find and replace the item in full_history_data
+                index = history_table.index(selected_item)
+                full_history_data[index] = new_row[:-1]  # Exclude calculated value
             else:
                 # Add mode
-                history_table.insert('', 'end', values=(pair, side, date, quantity, price, value), tags=(side.lower(),))
-            trade_window.destroy()
-            update_open_positions()
+                full_history_data.append(new_row[:-1])  # Exclude calculated value
+            # Refresh the Treeview based on full_history_data
+            filter_history('All')  # Or apply the current filter if implemented
         except ValueError as e:
             messagebox.showerror("Validation Error", str(e))
 
@@ -95,40 +91,52 @@ def add_trade(trade_data=None, selected_item=None, index=None):
 
 
 def delete_trade():
-    selected_item = history_table.selection()
-    if selected_item:
-        if messagebox.askyesno("Delete Confirmation", "Are you sure you want to delete the selected trade?"):
-            history_table.delete(selected_item)
+    selected_items = history_table.selection()
+    if selected_items:
+        response = messagebox.askyesno("Delete Confirmation", "Are you sure you want to delete the selected trade(s)?")
+        if response:
+            for selected_item in selected_items:
+                # Find the item in full_history_data by matching it with the values in the selected row
+                values = history_table.item(selected_item)['values']
+                # Assuming the 'date' and 'pair' uniquely identify a trade, adjust as necessary
+                pair, side, date, quantity, price = values[0], values[1], values[2], values[3], values[4]
+                full_history_data[:] = [row for row in full_history_data if not (row[0] == pair and row[1] == side and row[2] == date and row[3] == quantity and row[3] == price)]
+                # Now delete from the Treeview
+                history_table.delete(selected_item)
             update_open_positions()
 
 
 def update_open_positions():
     open_positions_table.delete(*open_positions_table.get_children())
     history = {}
+
     for row in history_table.get_children():
-        pair, side, _, quantity, price, _ = history_table.item(row)['values']
-        # Convert quantity and price to floats
-        quantity = float(quantity)
-        price = float(price)
-        if pair not in history:
-            history[pair] = []
-        history[pair].append((side, quantity, price))
+        row_data = history_table.item(row)['values']
+
+        # Check if the row data matches the expected format
+        if len(row_data) == 6:
+            pair, side, _, quantity, price, _ = row_data
+            # Convert quantity and price to floats
+            quantity = float(quantity)
+            price = float(price)
+            if pair not in history:
+                history[pair] = []
+            history[pair].append((side, quantity, price))
 
     for pair, trades in history.items():
         total_quantity, total_value = 0, 0
-        for side, quantity, price in sorted(trades, key=lambda x: x[2]):  # Sort by date assumed as third element
-            if side == 'Buy':
+        for side, quantity, price in trades:  # Assuming sorting by date is handled elsewhere or not needed here
+            if side.lower() == 'buy':
                 total_quantity += quantity
                 total_value += quantity * price
-            else:
+            elif side.lower() == 'sell':
                 total_quantity -= quantity
                 total_value -= quantity * price
-            if total_quantity == 0:
-                total_value = 0
 
         if total_quantity > 0:
             average_price = total_value / total_quantity
-            open_positions_table.insert('', 'end', values=(pair, round(total_quantity, 8), round(average_price, 8), round(total_quantity * average_price, 8)))
+            open_positions_table.insert('', 'end', values=(
+                pair, round(total_quantity, 8), round(average_price, 8), round(total_quantity * average_price, 8)))
 
 
 def edit_trade(event):
@@ -156,6 +164,48 @@ def sort_by_column(treeview, col, descending):
     treeview.heading(col, command=lambda col=col: sort_by_column(treeview, col, not descending))
 
 
+def show_filter_menu(event):
+    # Clear the existing menu
+    filter_menu.delete(0, tk.END)
+    filter_menu.add_command(label="All", command=lambda: filter_history('All'))
+
+    # Find unique pairs in the full history data
+    unique_pairs = set(item[0] for item in full_history_data)
+
+    for pair in sorted(unique_pairs):
+        filter_menu.add_command(label=pair, command=lambda p=pair: filter_history(p))
+
+    # Show the menu at the cursor's position
+    filter_menu.post(event.x_root, event.y_root)
+
+
+def filter_history(selected_pair):
+    # Clear the current view
+    for child in history_table.get_children():
+        history_table.delete(child)
+
+    # Apply filter
+    if selected_pair == 'All':
+        filtered_data = full_history_data
+    else:
+        filtered_data = [item for item in full_history_data if item[0] == selected_pair]
+
+    # Repopulate the Treeview with filtered data
+    for item in filtered_data:
+        # Assuming 'side' is at a specific index, adjust based on your data structure
+        side = item[1].lower()  # This should be 'buy' or 'sell', adjust the index as necessary
+        # Calculate 'value' if necessary or use existing value
+        quantity, price = float(item[3]), float(item[4])  # Adjust index based on your data structure
+        value = round(quantity * price, 8)
+        full_row = item + [value]  # Adjust as necessary if 'value' is already included
+        # Insert row with appropriate tag for coloring
+        history_table.insert('', 'end', values=full_row, tags=(side,))
+
+    # Reapply tag configurations for background colors
+    history_table.tag_configure('buy', background='pale green')
+    history_table.tag_configure('sell', background='light coral')
+
+
 root = tk.Tk()
 root.title("Crypto Trades Tracker")
 
@@ -181,10 +231,10 @@ right_frame.columnconfigure(0, weight=1)
 right_frame.rowconfigure(1, weight=1)
 
 # Button bar setup
-open_button = tk.Button(button_bar, text="Open", command=load_data)
+load_button = tk.Button(button_bar, text="Load", command=load_data)
 save_button = tk.Button(button_bar, text="Save", command=save_data)
 add_button = tk.Button(button_bar, text="+", command=add_trade)
-open_button.pack(side="left")
+load_button.pack(side="left")
 save_button.pack(side="left")
 add_button.pack(side="left")
 
@@ -213,10 +263,18 @@ history_table.tag_configure('sell', background='light coral')
 history_table.pack(fill="both", expand=True)
 
 for col in history_table['columns']:
-    history_table.heading(col, text=col.capitalize(), command=lambda _col=col: sort_by_column(history_table, _col, False))
+    history_table.heading(col, text=col.capitalize(),
+                          command=lambda _col=col: sort_by_column(history_table, _col, False))
+
+# Create a popup menu for filtering by pair
+filter_menu = tk.Menu(root, tearoff=0)
+filter_menu.add_command(label="All", command=lambda: filter_history('All'))
 
 # Bind double click to edit a trade
 history_table.bind("<Double-1>", edit_trade)
+
+# Bind right-click on the history table to show the filter menu
+history_table.bind("<Button-3>", lambda event: show_filter_menu(event))
 
 # Add delete function to delete key press
 root.bind("<Delete>", lambda e: delete_trade())
