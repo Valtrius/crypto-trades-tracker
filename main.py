@@ -3,6 +3,7 @@ from tkinter import messagebox, filedialog
 from tkinter.ttk import Treeview
 import json
 from datetime import datetime
+import uuid
 
 # Initialize a list to store all history data
 full_history_data = []
@@ -14,15 +15,8 @@ def load_data():
     if file_path:
         with open(file_path, 'r') as file:
             full_history_data = json.load(file)
-            history_table.delete(*history_table.get_children())  # Clear existing entries
-            for row in full_history_data:
-                # Assuming 'quantity' and 'price' are at specific indices
-                quantity = float(row[3])  # Adjust index based on your data structure
-                price = float(row[4])  # Adjust index based on your data structure
-                value = round(quantity * price, 8)
-                row.append(value)  # Append calculated value
-                history_table.insert('', 'end', values=row, tags=(row[1].lower(),))
-            update_open_positions()
+        filter_history('All')
+        update_open_positions()
 
 
 def save_data():
@@ -34,7 +28,7 @@ def save_data():
             json.dump(data_to_save, file)
 
 
-def add_trade(trade_data=None, selected_item=None, index=None):
+def add_trade(trade_data=None, selected_item=None, unique_id=None):
     trade_window = tk.Toplevel(root)
     trade_window.title("Edit Trade" if trade_data else "Add New Trade")
     trade_window.transient(root)
@@ -90,16 +84,23 @@ def add_trade(trade_data=None, selected_item=None, index=None):
             quantity = float(entries['Quantity'].get())
             price = float(entries['Price'].get())
             value = round(quantity * price, 8)
-            new_row = [pair, side, date, quantity, price, value]
+            trade_id = str(uuid.uuid4()) if not selected_item else unique_id
+            new_row = [trade_id, pair, side, date, quantity, price, value]
             if selected_item:  # Indicates edit mode
-                # Find and replace the item in full_history_data
-                index = history_table.index(selected_item)
-                full_history_data[index] = new_row[:-1]  # Exclude calculated value
+                history_table.item(selected_item, values=new_row[1:])
+                # Update the corresponding entry in full_history_data
+                for i, row in enumerate(full_history_data):
+                    # Assuming 'pair' and 'date' can be used to uniquely identify the entry
+                    if trade_id == row[0]:
+                        full_history_data[i] = new_row[:-1]
+                        break
             else:
                 # Add mode
                 full_history_data.append(new_row[:-1])  # Exclude calculated value
             # Refresh the Treeview based on full_history_data
             filter_history('All')  # Or apply the current filter if implemented
+            trade_window.destroy()
+            update_open_positions()
         except ValueError as e:
             messagebox.showerror("Validation Error", str(e))
 
@@ -128,22 +129,19 @@ def update_open_positions():
     open_positions_table.delete(*open_positions_table.get_children())
     history = {}
 
-    for row in history_table.get_children():
-        row_data = history_table.item(row)['values']
-
-        # Check if the row data matches the expected format
-        if len(row_data) == 6:
-            pair, side, _, quantity, price, _ = row_data
-            # Convert quantity and price to floats
-            quantity = float(quantity)
-            price = float(price)
-            if pair not in history:
-                history[pair] = []
-            history[pair].append((side, quantity, price))
+    for row in full_history_data:
+        # Assuming the format is [pair, side, date, quantity, price, value]
+        _, pair, side, _, quantity, price = row
+        # Convert quantity and price to floats
+        quantity = float(quantity)
+        price = float(price)
+        if pair not in history:
+            history[pair] = []
+        history[pair].append((side, quantity, price))
 
     for pair, trades in history.items():
         total_quantity, total_value = 0, 0
-        for side, quantity, price in trades:  # Assuming sorting by date is handled elsewhere or not needed here
+        for side, quantity, price in trades:
             if side.lower() == 'buy':
                 total_quantity += quantity
                 total_value += quantity * price
@@ -151,21 +149,21 @@ def update_open_positions():
                 total_quantity -= quantity
                 total_value -= quantity * price
 
+        # Reset total_value if total_quantity is zero to handle scenarios where buys and sells completely offset
+        if total_quantity == 0:
+            total_value = 0
+
         if total_quantity > 0:
             average_price = total_value / total_quantity
-            open_positions_table.insert('', 'end', values=(
-                pair, round(total_quantity, 8), round(average_price, 8), round(total_quantity * average_price, 8)))
+            open_positions_table.insert('', 'end', values=(pair, round(total_quantity, 8), round(average_price, 8), round(total_quantity * average_price, 8)))
 
 
 def edit_trade(event):
     if not history_table.selection():
         return
     selected_item = history_table.selection()[0]
-    # Find the index of the selected item
-    index = history_table.index(selected_item)
     trade_data = history_table.item(selected_item)['values']
-    # Pass both selected_item and its index to add_trade
-    add_trade(trade_data, selected_item, index)
+    add_trade(trade_data, selected_item, trade_data[0])
 
 
 def sort_by_column(treeview, col, descending):
@@ -210,6 +208,7 @@ def filter_history(selected_pair):
 
     # Repopulate the Treeview with filtered data
     for item in filtered_data:
+        item = item[1:]
         # Assuming 'side' is at a specific index, adjust based on your data structure
         side = item[1].lower()  # This should be 'buy' or 'sell', adjust the index as necessary
         # Calculate 'value' if necessary or use existing value
