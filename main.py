@@ -150,10 +150,13 @@ def delete_trade():
 
 
 def update_open_positions():
+    # Sort full_history_data by date (assuming date is at index 3)
+    sorted_history_data = sorted(full_history_data, key=lambda x: datetime.strptime(x[3], '%Y-%m-%d'))
+
     open_positions_table.delete(*open_positions_table.get_children())
     history = {}
 
-    for row in full_history_data:
+    for row in sorted_history_data:
         # Assuming the format is [trade_id, pair, side, date, quantity, price]
         _, pair, side, _, quantity, price = row
         quantity = Decimal(str(quantity))
