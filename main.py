@@ -14,6 +14,14 @@ full_history_data = []
 treeview_id_to_trade_id = {}
 
 
+class DecimalEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, Decimal):
+            return str(obj)  # Convert Decimal to string
+        # Let the base class default method raise the TypeError
+        return super(DecimalEncoder, self).default(obj)
+
+
 def load_data(file_path=None):
     if file_path is None:
         file_path = filedialog.askopenfilename(filetypes=[("JSON files", "*.json")])
@@ -21,7 +29,12 @@ def load_data(file_path=None):
         try:
             with open(file_path, 'r') as file:
                 global full_history_data
-                full_history_data = json.load(file)
+                data = json.load(file)
+                # Convert specific fields back to Decimal
+                for row in data:
+                    row[4] = Decimal(row[4])  # Assuming quantity is at index 4
+                    row[5] = Decimal(row[5])  # Assuming price is at index 5
+                full_history_data = data
                 filter_history('All')
                 update_open_positions()
                 save_last_used_file_path(file_path)
@@ -33,7 +46,7 @@ def save_data():
     file_path = filedialog.asksaveasfilename(defaultextension=".json", filetypes=[("JSON files", "*.json")])
     if file_path:
         with open(file_path, 'w') as file:
-            json.dump(full_history_data, file)
+            json.dump(full_history_data, file, cls=DecimalEncoder)  # Use the custom encoder
             save_last_used_file_path(file_path)
 
 
@@ -92,9 +105,9 @@ def add_trade(trade_data=None, selected_item=None):
             pair = entries['Pair'].get().upper()
             side = side_var.get()  # Get the value from radio button
             date = entries['Date'].get()
-            datetime.strptime(date, '%Y-%m-%d')  # Validates date format
-            quantity = Decimal(entries['Quantity'].get())
-            price = Decimal(entries['Price'].get())
+            datetime.strptime(date.replace(" ", ""), '%Y-%m-%d')  # Validates date format
+            quantity = Decimal(entries['Quantity'].get().replace(" ", ""))
+            price = Decimal(entries['Price'].get().replace(" ", ""))
             value = (quantity * price).quantize(decimal_places, ROUND_HALF_UP)
             trade_id = str(uuid.uuid4()) if not selected_item else treeview_id_to_trade_id[selected_item]
             new_row = [trade_id, pair, side, date, quantity, price, value]
@@ -102,7 +115,6 @@ def add_trade(trade_data=None, selected_item=None):
                 history_table.item(selected_item, values=new_row[1:])
                 # Update the corresponding entry in full_history_data
                 for i, row in enumerate(full_history_data):
-                    # Assuming 'pair' and 'date' can be used to uniquely identify the entry
                     if trade_id == row[0]:
                         full_history_data[i] = new_row[:-1]
                         break
@@ -168,7 +180,7 @@ def update_open_positions():
         total_quantity = info['total_quantity']
         if total_quantity > Decimal('0'):
             average_price = info['total_value'] / total_quantity
-            open_positions_table.insert('', 'end', values=(pair, total_quantity, average_price, info['total_value'], info['total_pnl']))
+            open_positions_table.insert('', 'end', values=(pair, total_quantity, average_price.quantize(decimal_places, ROUND_HALF_UP), info['total_value'].quantize(decimal_places, ROUND_HALF_UP), info['total_pnl']))
         else:
             # If there's no open position, show '-' in quantity, average price, and value columns, but still show the total PnL
             open_positions_table.insert('', 'end', values=(pair, '-', '-', '-', info['total_pnl']))
@@ -333,11 +345,16 @@ open_positions_table.heading("quantity", text="Quantity")
 open_positions_table.heading("average_price", text="Average Price")
 open_positions_table.heading("value", text="Value")
 open_positions_table.heading("pnl", text="PnL")
-open_positions_table.pack(fill="both", expand=True)
 # Set initial width and enable stretching for each column
 for col in open_positions_table['columns']:
     open_positions_table.heading(col, command=lambda _col=col: sort_by_column(open_positions_table, _col, False))
     open_positions_table.column(col, width=100, stretch=tk.YES)
+# Create a vertical scrollbar for the open_positions_table
+open_positions_vscroll = tk.Scrollbar(left_frame, orient="vertical", command=open_positions_table.yview)
+open_positions_vscroll.pack(side="right", fill="y")
+# Configure the treeview to update the scrollbar
+open_positions_table.configure(yscrollcommand=open_positions_vscroll.set)
+open_positions_table.pack(fill="both", expand=True)
 
 # HISTORY table setup
 history_label = tk.Label(right_frame, text="HISTORY")
@@ -351,11 +368,16 @@ history_table.heading("price", text="Price")
 history_table.heading("value", text="Value")
 history_table.tag_configure('buy', background='pale green')
 history_table.tag_configure('sell', background='light coral')
-history_table.pack(fill="both", expand=True)
-
+# Set initial width and enable stretching for each column
 for col in history_table['columns']:
     history_table.heading(col, command=lambda _col=col: sort_by_column(history_table, _col, False))
     history_table.column(col, width=100, stretch=tk.YES)
+# Create a vertical scrollbar for the history_table
+history_vscroll = tk.Scrollbar(right_frame, orient="vertical", command=history_table.yview)
+history_vscroll.pack(side="right", fill="y")
+# Configure the treeview to update the scrollbar
+history_table.configure(yscrollcommand=history_vscroll.set)
+history_table.pack(fill="both", expand=True)
 
 # Create a popup menu for filtering by pair
 filter_menu = tk.Menu(root, tearoff=0)
