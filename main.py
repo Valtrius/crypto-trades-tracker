@@ -254,6 +254,16 @@ def center_window(window, width, height):
     window.geometry('+{}+{}'.format(x, y))
 
 
+def deselect_all(event):
+    # Deselect all lines in open_positions_table
+    for item in open_positions_table.selection():
+        open_positions_table.selection_remove(item)
+
+    # Deselect all lines in history_table
+    for item in history_table.selection():
+        history_table.selection_remove(item)
+
+
 root = tk.Tk()
 root.title("Crypto Trades Tracker")
 
@@ -338,5 +348,8 @@ history_table.bind("<Button-3>", lambda event: show_filter_menu(event))
 
 # Add delete function to delete key press
 root.bind("<Delete>", lambda e: delete_trade())
+
+# Bind the Escape key to the deselect_all function
+root.bind('<Escape>', deselect_all)
 
 root.mainloop()
