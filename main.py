@@ -135,30 +135,34 @@ def update_open_positions():
     for row in full_history_data:
         # Assuming the format is [trade_id, pair, side, date, quantity, price]
         _, pair, side, _, quantity, price = row
-        # Convert quantity and price to floats
         quantity = float(quantity)
         price = float(price)
+
         if pair not in history:
-            history[pair] = []
-        history[pair].append((side, quantity, price))
+            history[pair] = {'trades': [], 'total_pnl': 0, 'total_quantity': 0, 'total_value': 0}
 
-    for pair, trades in history.items():
-        total_quantity, total_value = 0, 0
-        for side, quantity, price in trades:
-            if side.lower() == 'buy':
-                total_quantity += quantity
-                total_value += quantity * price
-            elif side.lower() == 'sell':
-                total_quantity -= quantity
-                total_value -= quantity * price
+        # Accumulate quantity and value for buy trades to calculate average buy price
+        if side.lower() == 'buy':
+            history[pair]['total_quantity'] += quantity
+            history[pair]['total_value'] += quantity * price
+        elif side.lower() == 'sell' and history[pair]['total_quantity'] > 0:
+            # Calculate PnL based on the difference from the average buy price
+            average_buy_price = history[pair]['total_value'] / history[pair]['total_quantity']
+            pnl = (price - average_buy_price) * quantity
+            history[pair]['total_pnl'] += pnl
+            # Adjust total quantity and value after sell
+            history[pair]['total_quantity'] -= quantity
+            # Optionally adjust total_value if you want to track value after sells
+            history[pair]['total_value'] -= quantity * average_buy_price
 
-            # Reset total_value if total_quantity is zero to handle scenarios where buys and sells completely offset
-            if total_quantity == 0:
-                total_value = 0
-
+    for pair, info in history.items():
+        total_quantity = info['total_quantity']
         if total_quantity > 0:
-            average_price = total_value / total_quantity
-            open_positions_table.insert('', 'end', values=(pair, round(total_quantity, 8), round(average_price, 8), round(total_quantity * average_price, 8)))
+            average_price = info['total_value'] / total_quantity
+            open_positions_table.insert('', 'end', values=(pair, round(total_quantity, 8), round(average_price, 8), round(info['total_value'], 8), round(info['total_pnl'], 8)))
+        else:
+            # If there's no open position, show '-' in quantity, average price, and value columns, but still show the total PnL
+            open_positions_table.insert('', 'end', values=(pair, '-', '-', '-', round(info['total_pnl'], 8)))
 
 
 def edit_trade(event):
@@ -289,15 +293,16 @@ add_button.pack(side="left")
 # OPEN POSITIONS table setup
 open_positions_label = tk.Label(left_frame, text="OPEN POSITIONS")
 open_positions_label.pack(fill="x")
-open_positions_table = Treeview(left_frame, columns=("pair", "quantity", "average_price", "value"), show='headings')
+open_positions_table = Treeview(left_frame, columns=("pair", "quantity", "average_price", "value", "pnl"), show='headings')
 open_positions_table.heading("pair", text="Pair")
 open_positions_table.heading("quantity", text="Quantity")
 open_positions_table.heading("average_price", text="Average Price")
 open_positions_table.heading("value", text="Value")
+open_positions_table.heading("pnl", text="PnL")
 open_positions_table.pack(fill="both", expand=True)
 # Set initial width and enable stretching for each column
 for col in open_positions_table['columns']:
-    open_positions_table.heading(col, text=col.capitalize(), command=lambda _col=col: sort_by_column(open_positions_table, _col, False))
+    open_positions_table.heading(col, command=lambda _col=col: sort_by_column(open_positions_table, _col, False))
     open_positions_table.column(col, width=100, stretch=tk.YES)
 
 # HISTORY table setup
@@ -315,7 +320,7 @@ history_table.tag_configure('sell', background='light coral')
 history_table.pack(fill="both", expand=True)
 
 for col in history_table['columns']:
-    history_table.heading(col, text=col.capitalize(), command=lambda _col=col: sort_by_column(history_table, _col, False))
+    history_table.heading(col, command=lambda _col=col: sort_by_column(history_table, _col, False))
     history_table.column(col, width=100, stretch=tk.YES)
 
 # Create a popup menu for filtering by pair
