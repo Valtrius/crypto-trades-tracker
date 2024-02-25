@@ -68,6 +68,9 @@ def add_trade(trade_data=None, selected_item=None, unique_id=None):
             entry.insert(0, trade_data[i + 1] if label != 'Pair' else trade_data[0])
         entries[label] = entry
 
+    # Set focus on the first entry widget (Pair)
+    entries['Pair'].focus_set()
+
     # Radio buttons for Side
     tk.Label(trade_window, text='Side').grid(row=len(labels), column=0)
     tk.Radiobutton(trade_window, text='Buy', variable=side_var, value='Buy').grid(row=len(labels), column=1)
