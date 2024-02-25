@@ -41,6 +41,24 @@ def add_trade(trade_data=None, selected_item=None, index=None):
     trade_window.grab_set()
     trade_window.resizable(False, False)
 
+    # Function to center the trade_window relative to its parent
+    def center_trade_window():
+        trade_window.update_idletasks()  # Update "requested size" from geometry manager
+        width = trade_window.winfo_width()
+        height = trade_window.winfo_height()
+        # Get parent window size and position
+        parent_x = root.winfo_x()
+        parent_y = root.winfo_y()
+        parent_width = root.winfo_width()
+        parent_height = root.winfo_height()
+        # Calculate position relative to parent
+        x = parent_x + (parent_width // 2) - (width // 2)
+        y = parent_y + (parent_height // 2) - (height // 2)
+        trade_window.geometry('+{}+{}'.format(x, y))
+
+    # Call the function to center the trade_window
+    center_trade_window()
+
     # Adjusted labels to exclude 'Side' because it's handled separately by radio buttons
     labels = ['Pair', 'Date', 'Quantity', 'Price']
     entries = {}
@@ -161,7 +179,7 @@ def sort_by_column(treeview, col, descending):
         treeview.move(child_id, '', index)
 
     # Switch the heading so that it will sort in the opposite direction
-    treeview.heading(col, command=lambda col=col: sort_by_column(treeview, col, not descending))
+    treeview.heading(col, command=lambda _col=col: sort_by_column(treeview, _col, not descending))
 
 
 def show_filter_menu(event):
@@ -206,8 +224,32 @@ def filter_history(selected_pair):
     history_table.tag_configure('sell', background='light coral')
 
 
+# Function to center the window on the screen with a specified size
+def center_window(window, width, height):
+    # Set initial size
+    window.geometry('{}x{}'.format(width, height))
+
+    window.update_idletasks()  # Update "requested size" from geometry manager
+
+    # Calculate center position
+    screen_width = window.winfo_screenwidth()
+    screen_height = window.winfo_screenheight()
+    x = (screen_width // 2) - (width // 2)
+    y = (screen_height // 2) - (height // 2)
+
+    # Apply the calculated position
+    window.geometry('+{}+{}'.format(x, y))
+
+
 root = tk.Tk()
 root.title("Crypto Trades Tracker")
+
+# Specify desired initial size
+initial_width = 1280
+initial_height = 720
+
+# Use the function to center the main window with the specified size
+center_window(root, initial_width, initial_height)
 
 # Configure the root window's grid
 root.columnconfigure(0, weight=1)
@@ -247,6 +289,9 @@ open_positions_table.heading("quantity", text="Quantity")
 open_positions_table.heading("average_price", text="Average Price")
 open_positions_table.heading("value", text="Value")
 open_positions_table.pack(fill="both", expand=True)
+# Set initial width and enable stretching for each column
+for col in open_positions_table['columns']:
+    open_positions_table.column(col, width=100, stretch=tk.YES)
 
 # HISTORY table setup
 history_label = tk.Label(right_frame, text="HISTORY")
@@ -263,8 +308,8 @@ history_table.tag_configure('sell', background='light coral')
 history_table.pack(fill="both", expand=True)
 
 for col in history_table['columns']:
-    history_table.heading(col, text=col.capitalize(),
-                          command=lambda _col=col: sort_by_column(history_table, _col, False))
+    history_table.heading(col, text=col.capitalize(), command=lambda _col=col: sort_by_column(history_table, _col, False))
+    history_table.column(col, width=100, stretch=tk.YES)
 
 # Create a popup menu for filtering by pair
 filter_menu = tk.Menu(root, tearoff=0)
