@@ -12,8 +12,8 @@ def load_data():
             history_data = json.load(file)
             for row in history_data:
                 # Convert 'quantity' and 'price' to floats before calculating 'value'
-                quantity = float(row[-2])  # Adjust the index as per your data structure
-                price = float(row[-1])     # Adjust the index as per your data structure
+                quantity = float(row[-2])
+                price = float(row[-1])
                 value = round(quantity * price, 8)  # Recalculate 'value'
                 # Append the calculated 'value' to the row data
                 full_row = row + [value]
@@ -25,8 +25,16 @@ def save_data():
     file_path = filedialog.asksaveasfilename(defaultextension=".json", filetypes=[("JSON files", "*.json")])
     if file_path:
         rows = history_table.get_children()
-        # Exclude the last column (value) from each row
-        data_to_save = [history_table.item(row)['values'][:-1] for row in rows]
+        # First, extract the data along with the row ID to preserve it for later reordering
+        data_with_id = [(row, history_table.item(row)['values']) for row in rows]
+
+        # Convert the date string to a datetime object for proper comparison, assuming the date is at index 2
+        # Adjust the index if your date is in a different column
+        data_with_id.sort(key=lambda x: datetime.strptime(x[1][2], '%Y-%m-%d'))
+
+        # Exclude the last column (value) from each row and prepare the data to be saved
+        data_to_save = [item[1][:-1] for item in data_with_id]
+
         with open(file_path, 'w') as file:
             json.dump(data_to_save, file)
 
