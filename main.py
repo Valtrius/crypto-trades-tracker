@@ -22,10 +22,8 @@ def load_data():
 def save_data():
     file_path = filedialog.asksaveasfilename(defaultextension=".json", filetypes=[("JSON files", "*.json")])
     if file_path:
-        # Exclude the last column (value) when saving
-        data_to_save = [row[:-1] for row in full_history_data]
         with open(file_path, 'w') as file:
-            json.dump(data_to_save, file)
+            json.dump(full_history_data, file)
 
 
 def add_trade(trade_data=None, selected_item=None, unique_id=None):
@@ -189,7 +187,7 @@ def show_filter_menu(event):
     filter_menu.add_command(label="All", command=lambda: filter_history('All'))
 
     # Find unique pairs in the full history data
-    unique_pairs = set(item[0] for item in full_history_data)
+    unique_pairs = set(item[1] for item in full_history_data)
 
     for pair in sorted(unique_pairs):
         filter_menu.add_command(label=pair, command=lambda p=pair: filter_history(p))
@@ -207,7 +205,7 @@ def filter_history(selected_pair):
     if selected_pair == 'All':
         filtered_data = full_history_data
     else:
-        filtered_data = [item for item in full_history_data if item[0] == selected_pair]
+        filtered_data = [item for item in full_history_data if item[1] == selected_pair]
 
     # Repopulate the Treeview with filtered data
     for item in filtered_data:
