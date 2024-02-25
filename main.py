@@ -14,14 +14,19 @@ full_history_data = []
 treeview_id_to_trade_id = {}
 
 
-def load_data():
-    global full_history_data
-    file_path = filedialog.askopenfilename(filetypes=[("JSON files", "*.json")])
+def load_data(file_path=None):
+    if file_path is None:
+        file_path = filedialog.askopenfilename(filetypes=[("JSON files", "*.json")])
     if file_path:
-        with open(file_path, 'r') as file:
-            full_history_data = json.load(file)
-        filter_history('All')
-        update_open_positions()
+        try:
+            with open(file_path, 'r') as file:
+                global full_history_data
+                full_history_data = json.load(file)
+                filter_history('All')
+                update_open_positions()
+                save_last_used_file_path(file_path)
+        except Exception as e:
+            print("Error loading file:", e)
 
 
 def save_data():
@@ -29,6 +34,7 @@ def save_data():
     if file_path:
         with open(file_path, 'w') as file:
             json.dump(full_history_data, file)
+            save_last_used_file_path(file_path)
 
 
 def add_trade(trade_data=None, selected_item=None):
@@ -264,6 +270,21 @@ def deselect_all(event):
         history_table.selection_remove(item)
 
 
+def save_last_used_file_path(file_path):
+    with open('last_file.txt', 'w') as f:
+        f.write(file_path)
+
+
+def load_last_used_file():
+    try:
+        with open('last_file.txt', 'r') as f:
+            file_path = f.read().strip()
+            if file_path:
+                load_data(file_path)
+    except Exception as e:
+        print("Error loading last used file:", e)
+
+
 root = tk.Tk()
 root.title("Crypto Trades Tracker")
 
@@ -351,5 +372,7 @@ root.bind("<Delete>", lambda e: delete_trade())
 
 # Bind the Escape key to the deselect_all function
 root.bind('<Escape>', deselect_all)
+
+load_last_used_file()  # Automatically load the last used file
 
 root.mainloop()
