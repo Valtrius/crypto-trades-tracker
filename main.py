@@ -7,6 +7,8 @@ import uuid
 
 # Initialize a list to store all history data
 full_history_data = []
+# Dictionary to map Treeview item IDs to trade unique IDs
+treeview_id_to_trade_id = {}
 
 
 def load_data():
@@ -26,7 +28,7 @@ def save_data():
             json.dump(full_history_data, file)
 
 
-def add_trade(trade_data=None, selected_item=None, unique_id=None):
+def add_trade(trade_data=None, selected_item=None):
     trade_window = tk.Toplevel(root)
     trade_window.title("Edit Trade" if trade_data else "Add New Trade")
     trade_window.transient(root)
@@ -85,7 +87,7 @@ def add_trade(trade_data=None, selected_item=None, unique_id=None):
             quantity = float(entries['Quantity'].get())
             price = float(entries['Price'].get())
             value = round(quantity * price, 8)
-            trade_id = str(uuid.uuid4()) if not selected_item else unique_id
+            trade_id = str(uuid.uuid4()) if not selected_item else treeview_id_to_trade_id[selected_item]
             new_row = [trade_id, pair, side, date, quantity, price, value]
             if selected_item:  # Indicates edit mode
                 history_table.item(selected_item, values=new_row[1:])
@@ -164,7 +166,7 @@ def edit_trade(event):
         return
     selected_item = history_table.selection()[0]
     trade_data = history_table.item(selected_item)['values']
-    add_trade(trade_data, selected_item, trade_data[0])
+    add_trade(trade_data, selected_item)
 
 
 def sort_by_column(treeview, col, descending):
@@ -197,9 +199,13 @@ def show_filter_menu(event):
 
 
 def filter_history(selected_pair):
+    global treeview_id_to_trade_id
+
     # Clear the current view
     for child in history_table.get_children():
         history_table.delete(child)
+
+    treeview_id_to_trade_id = {}
 
     # Apply filter
     if selected_pair == 'All':
@@ -209,15 +215,15 @@ def filter_history(selected_pair):
 
     # Repopulate the Treeview with filtered data
     for item in filtered_data:
-        item = item[1:]
         # Assuming 'side' is at a specific index, adjust based on your data structure
-        side = item[1].lower()  # This should be 'buy' or 'sell', adjust the index as necessary
+        side = item[2].lower()  # This should be 'buy' or 'sell', adjust the index as necessary
         # Calculate 'value' if necessary or use existing value
-        quantity, price = float(item[3]), float(item[4])  # Adjust index based on your data structure
+        quantity, price = float(item[4]), float(item[5])  # Adjust index based on your data structure
         value = round(quantity * price, 8)
         full_row = item + [value]  # Adjust as necessary if 'value' is already included
         # Insert row with appropriate tag for coloring
-        history_table.insert('', 'end', values=full_row, tags=(side,))
+        item_id = history_table.insert('', 'end', values=full_row[1:], tags=(side,))
+        treeview_id_to_trade_id[item_id] = item[0]  # Map Treeview item ID to trade ID
 
     # Reapply tag configurations for background colors
     history_table.tag_configure('buy', background='pale green')
