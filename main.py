@@ -291,6 +291,7 @@ open_positions_table.heading("value", text="Value")
 open_positions_table.pack(fill="both", expand=True)
 # Set initial width and enable stretching for each column
 for col in open_positions_table['columns']:
+    open_positions_table.heading(col, text=col.capitalize(), command=lambda _col=col: sort_by_column(open_positions_table, _col, False))
     open_positions_table.column(col, width=100, stretch=tk.YES)
 
 # HISTORY table setup
