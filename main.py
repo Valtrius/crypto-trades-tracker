@@ -93,18 +93,29 @@ def add_trade(trade_data=None, selected_item=None):
     entries = {}
     side_var = tk.StringVar(value=trade_data[1] if trade_data else 'Buy')
 
+    selected_open_position = open_positions_table.selection()
+    prefill_pair = None
+    if selected_open_position:
+        # The first column in the open positions table is 'pair'
+        prefill_pair = open_positions_table.item(selected_open_position[0])['values'][0]
+
     for i, label in enumerate(labels):
         tk.Label(trade_window, text=label).grid(row=i, column=0)
         entry = tk.Entry(trade_window)
         entry.grid(row=i, column=1)
-        # Skip index 1 ('Side') if editing existing trade data
-        if trade_data:
+        if prefill_pair and label == 'Pair':
+            entry.insert(0, prefill_pair)
+        elif trade_data:
             # Adjusting for the difference in indices due to 'Side' being a radio button
             entry.insert(0, trade_data[i + 1] if label != 'Pair' else trade_data[0])
         entries[label] = entry
 
-    # Set focus on the first entry widget (Pair)
-    entries['Pair'].focus_set()
+    if prefill_pair:
+        # Set focus to the 'Date' entry if 'Pair' was pre-filled
+        entries['Date'].focus_set()
+    else:
+        # Otherwise, focus on the 'Pair' entry
+        entries['Pair'].focus_set()
 
     # Radio buttons for Side
     tk.Label(trade_window, text='Side').grid(row=len(labels), column=0)
