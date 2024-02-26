@@ -173,6 +173,8 @@ def add_trade(trade_data=None, selected_item=None):
         except ValueError as e:
             messagebox.showerror("Validation Error", str(e))
 
+    trade_window.bind('<Return>', lambda event=None: validate_and_save_trade())
+
     button_text = "Edit Trade" if trade_data else "Add Trade"
     add_button = tk.Button(trade_window, text=button_text, command=validate_and_save_trade)
     add_button.grid(row=len(labels) + 1, columnspan=3)
