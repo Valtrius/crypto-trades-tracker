@@ -19,8 +19,8 @@ history_table_id = 'history_table'
 
 # Dictionaries to remember the sort and filter state of each table
 sort_filter_states = {
-    open_positions_table_id: {'col': None, 'order': False, 'filter': "All"},
-    history_table_id: {'col': None, 'order': False, 'filter': "All"}
+    open_positions_table_id: {'col': 'pair', 'order': False, 'filter': "All"},
+    history_table_id: {'col': 'pair', 'order': False, 'filter': "All"}
 }
 
 
@@ -48,6 +48,8 @@ def load_data(file_path=None):
                 filter_history('All')
                 update_open_positions()
                 save_last_used_file_path(file_path)
+                # Sort again
+                sort_by_column(history_table, sort_filter_states[history_table_id]['col'], sort_filter_states[history_table_id]['order'], history_table_id)
         except Exception as e:
             print("Error loading file:", e)
 
@@ -131,20 +133,18 @@ def add_trade(trade_data=None, selected_item=None):
             else:
                 # Add mode
                 full_history_data.append(new_row[:-1])  # Exclude calculated value
-            # Refresh the Treeview based on full_history_data
-            filter_history(history_filter)  # Or apply the current filter if implemented
+
+            filter_history(sort_filter_states[history_table_id]['filter'])  # Apply the current filter if implemented
             trade_window.destroy()
-            update_open_positions()
+            update_open_positions()  # Refresh the Treeview based on full_history_data
+            # Sort again
+            sort_by_column(history_table, sort_filter_states[history_table_id]['col'], sort_filter_states[history_table_id]['order'], history_table_id)
         except ValueError as e:
             messagebox.showerror("Validation Error", str(e))
 
     button_text = "Edit Trade" if trade_data else "Add Trade"
     add_button = tk.Button(trade_window, text=button_text, command=validate_and_save_trade)
     add_button.grid(row=len(labels) + 1, columnspan=3)
-
-    # Sort again
-    if sort_filter_states[history_table_id]['col']:
-        sort_by_column(history_table, sort_filter_states[history_table_id]['col'], sort_filter_states[history_table_id]['order'], history_table_id)
 
 
 def delete_trade():
@@ -162,8 +162,7 @@ def delete_trade():
             update_open_positions()
 
             # Sort again
-            if sort_filter_states[history_table_id]['col']:
-                sort_by_column(history_table, sort_filter_states[history_table_id]['col'], sort_filter_states[history_table_id]['order'], history_table_id)
+            sort_by_column(history_table, sort_filter_states[history_table_id]['col'], sort_filter_states[history_table_id]['order'], history_table_id)
 
 
 def update_open_positions():
@@ -275,7 +274,7 @@ def show_filter_menu(event):
 
 
 def filter_history(selected_pair):
-    global treeview_id_to_trade_id, history_filter
+    global treeview_id_to_trade_id
 
     # Clear the current view
     for child in history_table.get_children():
@@ -305,7 +304,7 @@ def filter_history(selected_pair):
     history_table.tag_configure('buy', background='pale green')
     history_table.tag_configure('sell', background='light coral')
 
-    history_filter = selected_pair
+    sort_filter_states[history_table_id]['filter'] = selected_pair
 
 
 # Function to center the window on the screen with a specified size
