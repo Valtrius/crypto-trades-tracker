@@ -157,16 +157,19 @@ def add_trade(trade_data=None, selected_item=None):
             trade_window.destroy()
 
             # Store current selection from open_position table
-            selected_pair = open_positions_table.item(open_positions_table.selection()[0])['values'][0]
+            selected_position = open_positions_table.selection()
+            if selected_position:
+                selected_pair = open_positions_table.item(selected_position[0])['values'][0]
 
             update_open_positions()  # Refresh the Treeview based on full_history_data
             # Sort again
             sort_by_column(history_table, sort_filter_states[history_table_id]['col'], sort_filter_states[history_table_id]['order'], history_table_id)
 
-            for item in open_positions_table.get_children():
-                if open_positions_table.item(item)['values'][0] == selected_pair:
-                    open_positions_table.selection_set(item)
-                    break
+            if selected_position:
+                for item in open_positions_table.get_children():
+                    if open_positions_table.item(item)['values'][0] == selected_pair:
+                        open_positions_table.selection_set(item)
+                        break
         except ValueError as e:
             messagebox.showerror("Validation Error", str(e))
 
