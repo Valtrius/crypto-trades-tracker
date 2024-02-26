@@ -13,6 +13,16 @@ full_history_data = []
 # Dictionary to map Treeview item IDs to trade unique IDs
 treeview_id_to_trade_id = {}
 
+# Assign identifiers to each Treeview
+open_positions_table_id = 'open_positions_table'
+history_table_id = 'history_table'
+
+# Dictionaries to remember the sort and filter state of each table
+sort_filter_states = {
+    open_positions_table_id: {'col': None, 'order': False, 'filter': "All"},
+    history_table_id: {'col': None, 'order': False, 'filter': "All"}
+}
+
 
 class DecimalEncoder(json.JSONEncoder):
     def default(self, obj):
@@ -122,7 +132,7 @@ def add_trade(trade_data=None, selected_item=None):
                 # Add mode
                 full_history_data.append(new_row[:-1])  # Exclude calculated value
             # Refresh the Treeview based on full_history_data
-            filter_history('All')  # Or apply the current filter if implemented
+            filter_history(history_filter)  # Or apply the current filter if implemented
             trade_window.destroy()
             update_open_positions()
         except ValueError as e:
@@ -132,6 +142,10 @@ def add_trade(trade_data=None, selected_item=None):
     add_button = tk.Button(trade_window, text=button_text, command=validate_and_save_trade)
     add_button.grid(row=len(labels) + 1, columnspan=3)
 
+    # Sort again
+    if sort_filter_states[history_table_id]['col']:
+        sort_by_column(history_table, sort_filter_states[history_table_id]['col'], sort_filter_states[history_table_id]['order'], history_table_id)
+
 
 def delete_trade():
     selected_items = history_table.selection()
@@ -139,14 +153,17 @@ def delete_trade():
         response = messagebox.askyesno("Delete Confirmation", "Are you sure you want to delete the selected trade(s)?")
         if response:
             for selected_item in selected_items:
-                # Find the item in full_history_data by matching it with the values in the selected row
-                values = history_table.item(selected_item)['values']
-                # Assuming the 'date' and 'pair' uniquely identify a trade, adjust as necessary
-                pair, side, date, quantity, price = values[0], values[1], values[2], values[3], values[4]
-                full_history_data[:] = [row for row in full_history_data if not (row[0] == pair and row[1] == side and row[2] == date and row[3] == quantity and row[3] == price)]
+                # Get the trade_id of the selected item
+                trade_id = treeview_id_to_trade_id[selected_item]
+                # Remove the trade from full_history_data based on trade_id
+                full_history_data[:] = [row for row in full_history_data if row[0] != trade_id]
                 # Now delete from the Treeview
                 history_table.delete(selected_item)
             update_open_positions()
+
+            # Sort again
+            if sort_filter_states[history_table_id]['col']:
+                sort_by_column(history_table, sort_filter_states[history_table_id]['col'], sort_filter_states[history_table_id]['order'], history_table_id)
 
 
 def update_open_positions():
@@ -188,6 +205,10 @@ def update_open_positions():
             # If there's no open position, show '-' in quantity, average price, and value columns, but still show the total PnL
             open_positions_table.insert('', 'end', values=(pair, '-', '-', '-', info['total_pnl']))
 
+    # Sort again
+    if sort_filter_states[open_positions_table_id]['col']:
+        sort_by_column(open_positions_table, sort_filter_states[open_positions_table_id]['col'], sort_filter_states[open_positions_table_id]['order'], open_positions_table_id)
+
 
 def edit_trade(event):
     if not history_table.selection():
@@ -196,19 +217,46 @@ def edit_trade(event):
     trade_data = history_table.item(selected_item)['values']
     add_trade(trade_data, selected_item)
 
+    # Sort again
+    if sort_filter_states[open_positions_table_id]['col']:
+        sort_by_column(open_positions_table, sort_filter_states[open_positions_table_id]['col'], sort_filter_states[open_positions_table_id]['order'], open_positions_table_id)
 
-def sort_by_column(treeview, col, descending):
+
+def sort_by_column(treeview, col, descending, treeview_id):
     """Sort tree view contents when a column header is clicked on."""
+    # Update the sort state for this specific treeview
+    sort_filter_states[treeview_id]['col'] = col
+    sort_filter_states[treeview_id]['order'] = descending
+
     # Retrieve data from the column
     data_list = [(treeview.set(child_id, col), child_id) for child_id in treeview.get_children('')]
-    # Sort the data
-    data_list.sort(reverse=descending)
+    # If the data to be sorted is numeric, we convert it to a float for sorting
+    try:
+        data_list.sort(key=lambda t: float(t[0]), reverse=descending)
+    except ValueError:
+        # If conversion to float fails, sort as strings
+        data_list.sort(reverse=descending)
 
     for index, (data, child_id) in enumerate(data_list):
         treeview.move(child_id, '', index)
 
     # Switch the heading so that it will sort in the opposite direction
-    treeview.heading(col, command=lambda _col=col: sort_by_column(treeview, _col, not descending))
+    treeview.heading(col, command=lambda _col=col: sort_by_column(treeview, _col, not descending, treeview_id))
+
+    # Update the headings on all columns
+    for column in treeview["columns"]:
+        if column == col:
+            # Update the heading of the sorted column to include an arrow
+            heading_text = col.replace('_', ' ').title()
+            if descending:
+                heading_text += ' \u25BC'  # Downward arrow symbol
+            else:
+                heading_text += ' \u25B2'  # Upward arrow symbol
+            treeview.heading(column, text=heading_text, command=lambda _col=column: sort_by_column(treeview, _col, not descending, treeview_id))
+        else:
+            # Reset the heading text for all other columns to remove arrows
+            heading_text = column.replace('_', ' ').title()
+            treeview.heading(column, text=heading_text, command=lambda _col=column: sort_by_column(treeview, _col, True, treeview_id))
 
 
 def show_filter_menu(event):
@@ -227,7 +275,7 @@ def show_filter_menu(event):
 
 
 def filter_history(selected_pair):
-    global treeview_id_to_trade_id
+    global treeview_id_to_trade_id, history_filter
 
     # Clear the current view
     for child in history_table.get_children():
@@ -256,6 +304,8 @@ def filter_history(selected_pair):
     # Reapply tag configurations for background colors
     history_table.tag_configure('buy', background='pale green')
     history_table.tag_configure('sell', background='light coral')
+
+    history_filter = selected_pair
 
 
 # Function to center the window on the screen with a specified size
@@ -342,7 +392,7 @@ add_button.pack(side="left")
 # OPEN POSITIONS table setup
 open_positions_label = tk.Label(left_frame, text="OPEN POSITIONS")
 open_positions_label.pack(fill="x")
-open_positions_table = Treeview(left_frame, columns=("pair", "quantity", "average_price", "value", "pnl"), show='headings')
+open_positions_table = Treeview(left_frame, columns=("pair", "quantity", "average_price", "value", "pnl"), show='headings', name=open_positions_table_id)
 open_positions_table.heading("pair", text="Pair")
 open_positions_table.heading("quantity", text="Quantity")
 open_positions_table.heading("average_price", text="Average Price")
@@ -350,7 +400,7 @@ open_positions_table.heading("value", text="Value")
 open_positions_table.heading("pnl", text="PnL")
 # Set initial width and enable stretching for each column
 for col in open_positions_table['columns']:
-    open_positions_table.heading(col, command=lambda _col=col: sort_by_column(open_positions_table, _col, False))
+    open_positions_table.heading(col, command=lambda _col=col: sort_by_column(open_positions_table, _col, False, open_positions_table_id))
     open_positions_table.column(col, width=100, stretch=tk.YES)
 # Create a vertical scrollbar for the open_positions_table
 open_positions_vscroll = tk.Scrollbar(left_frame, orient="vertical", command=open_positions_table.yview)
@@ -362,7 +412,7 @@ open_positions_table.pack(fill="both", expand=True)
 # HISTORY table setup
 history_label = tk.Label(right_frame, text="HISTORY")
 history_label.pack(fill="x")
-history_table = Treeview(right_frame, columns=("pair", "side", "date", "quantity", "price", "value"), show='headings')
+history_table = Treeview(right_frame, columns=("pair", "side", "date", "quantity", "price", "value"), show='headings', name=history_table_id)
 history_table.heading("pair", text="Pair")
 history_table.heading("side", text="Side")
 history_table.heading("date", text="Date")
@@ -373,7 +423,7 @@ history_table.tag_configure('buy', background='pale green')
 history_table.tag_configure('sell', background='light coral')
 # Set initial width and enable stretching for each column
 for col in history_table['columns']:
-    history_table.heading(col, command=lambda _col=col: sort_by_column(history_table, _col, False))
+    history_table.heading(col, command=lambda _col=col: sort_by_column(history_table, _col, False, history_table_id))
     history_table.column(col, width=100, stretch=tk.YES)
 # Create a vertical scrollbar for the history_table
 history_vscroll = tk.Scrollbar(right_frame, orient="vertical", command=history_table.yview)
