@@ -1,6 +1,7 @@
 import tkinter as tk
 from tkinter import messagebox, filedialog
 from tkinter.ttk import Treeview
+from tkinter import font as tkFont
 import json
 from datetime import datetime
 import uuid
@@ -389,7 +390,7 @@ save_button.pack(side="left")
 add_button.pack(side="left")
 
 # OPEN POSITIONS table setup
-open_positions_label = tk.Label(left_frame, text="OPEN POSITIONS")
+open_positions_label = tk.Label(left_frame, text="OPEN POSITIONS", font=tkFont.Font(weight="bold"))
 open_positions_label.pack(fill="x")
 open_positions_table = Treeview(left_frame, columns=("pair", "quantity", "average_price", "value", "pnl"), show='headings', name=open_positions_table_id)
 open_positions_table.heading("pair", text="Pair")
@@ -409,7 +410,7 @@ open_positions_table.configure(yscrollcommand=open_positions_vscroll.set)
 open_positions_table.pack(fill="both", expand=True)
 
 # HISTORY table setup
-history_label = tk.Label(right_frame, text="HISTORY")
+history_label = tk.Label(right_frame, text="HISTORY", font=tkFont.Font(weight="bold"))
 history_label.pack(fill="x")
 history_table = Treeview(right_frame, columns=("pair", "side", "date", "quantity", "price", "value"), show='headings', name=history_table_id)
 history_table.heading("pair", text="Pair")
