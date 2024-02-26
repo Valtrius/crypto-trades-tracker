@@ -88,6 +88,13 @@ def add_trade(trade_data=None, selected_item=None):
     # Call the function to center the trade_window
     center_trade_window()
 
+    # Function to close the window
+    def close_window(event=None):
+        trade_window.destroy()
+
+    # Bind the Escape key to the close_window function
+    trade_window.bind('<Escape>', close_window)
+
     # Adjusted labels to exclude 'Side' because it's handled separately by radio buttons
     labels = ['Pair', 'Date', 'Quantity', 'Price']
     entries = {}
@@ -95,7 +102,7 @@ def add_trade(trade_data=None, selected_item=None):
 
     selected_open_position = open_positions_table.selection()
     prefill_pair = None
-    if selected_open_position:
+    if not selected_item and selected_open_position:
         # The first column in the open positions table is 'pair'
         prefill_pair = open_positions_table.item(selected_open_position[0])['values'][0]
 
