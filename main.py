@@ -115,12 +115,12 @@ class MainWindow(QMainWindow):
         history_layout = QVBoxLayout(history_section)
 
         # Trade History Title
-        trade_history_title = QLabel("TRADE HISTORY")
-        trade_history_title.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        trade_history_font = trade_history_title.font()
-        trade_history_font.setBold(True)
-        trade_history_title.setFont(trade_history_font)
-        history_layout.addWidget(trade_history_title)
+        history_title = QLabel("TRADE HISTORY")
+        history_title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        history_font = history_title.font()
+        history_font.setBold(True)
+        history_title.setFont(history_font)
+        history_layout.addWidget(history_title)
 
         # Filter UI for History Table
         self.filter_label = QLabel("Filter:")
