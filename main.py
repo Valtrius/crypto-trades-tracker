@@ -2,7 +2,7 @@ import os
 import sys
 import json
 from decimal import Decimal, ROUND_HALF_UP
-from PyQt6.QtWidgets import QApplication, QMainWindow, QWidget, QPushButton, QVBoxLayout, QHBoxLayout, QTableWidget, QHeaderView, QFileDialog, QMessageBox, QLabel, QLineEdit, QTableWidgetItem, QAbstractItemView
+from PyQt6.QtWidgets import QApplication, QMainWindow, QWidget, QPushButton, QVBoxLayout, QHBoxLayout, QTableWidget, QHeaderView, QFileDialog, QMessageBox, QLabel, QLineEdit, QTableWidgetItem, QAbstractItemView, QStyle
 from PyQt6.QtCore import Qt, QEvent
 from PyQt6.QtGui import QColor
 
@@ -98,6 +98,21 @@ class MainWindow(QMainWindow):
         positions_title.setFont(positions_font)
         positions_layout.addWidget(positions_title)
 
+        # Filter UI for Positions Table
+        self.positions_filter_label = QLabel("Filter:")
+        self.positions_filter_text_box = QLineEdit()
+        positions_filter_layout = QHBoxLayout()
+        positions_filter_layout.addWidget(self.positions_filter_label)
+        positions_filter_layout.addWidget(self.positions_filter_text_box)
+        positions_layout.addLayout(positions_filter_layout)
+
+        # Add clear button inside QLineEdit for Positions Filter
+        positions_clear_action = self.positions_filter_text_box.addAction(
+            self.style().standardIcon(QStyle.StandardPixmap.SP_LineEditClearButton),
+            QLineEdit.ActionPosition.TrailingPosition
+        )
+        positions_clear_action.triggered.connect(lambda: self.clear_filter(self.positions_table, self.positions_filter_text_box))
+
         # Positions Table
         self.positions_table = QTableWidget(0, 5)
         self.positions_table.setHorizontalHeaderLabels(["Pair", "Quantity", "Average Price", "Value", "PnL"])
@@ -123,12 +138,19 @@ class MainWindow(QMainWindow):
         history_layout.addWidget(history_title)
 
         # Filter UI for History Table
-        self.filter_label = QLabel("Filter:")
-        self.filter_text_box = QLineEdit()
-        filter_layout = QHBoxLayout()
-        filter_layout.addWidget(self.filter_label)
-        filter_layout.addWidget(self.filter_text_box)
-        history_layout.addLayout(filter_layout)
+        self.history_filter_label = QLabel("Filter:")
+        self.history_filter_text_box = QLineEdit()
+        history_filter_layout = QHBoxLayout()
+        history_filter_layout.addWidget(self.history_filter_label)
+        history_filter_layout.addWidget(self.history_filter_text_box)
+        history_layout.addLayout(history_filter_layout)
+
+        # Add clear button inside QLineEdit
+        history_clear_action = self.history_filter_text_box.addAction(
+            self.style().standardIcon(QStyle.StandardPixmap.SP_LineEditClearButton),
+            QLineEdit.ActionPosition.TrailingPosition
+        )
+        history_clear_action.triggered.connect(lambda: self.clear_filter(self.history_table, self.history_filter_text_box))
 
         # History Table
         self.history_table = QTableWidget(0, 6)
@@ -150,7 +172,12 @@ class MainWindow(QMainWindow):
         self.main_layout.addWidget(self.tables_container)
 
         # Connect the filter's textChanged signal to the filtering function
-        self.filter_text_box.textChanged.connect(lambda: self.filter_table(self.history_table, self.filter_text_box.text()))
+        self.positions_filter_text_box.textChanged.connect(lambda: self.filter_table(self.positions_table, self.positions_filter_text_box.text()))
+        self.history_filter_text_box.textChanged.connect(lambda: self.filter_table(self.history_table, self.history_filter_text_box.text()))
+
+    def clear_filter(self, table_widget, filter_text_box):
+        filter_text_box.clear()
+        self.filter_table(table_widget, filter_text_box.text())
 
     def load_data(self, file_path=None):
         if file_path is None:
@@ -378,8 +405,11 @@ class MainWindow(QMainWindow):
         for row in range(table_widget.rowCount()):
             item = table_widget.item(row, 0)
             # Ensure there's an item and filter_text is not empty to avoid hiding everything by default
-            if item and filter_text:
-                table_widget.setRowHidden(row, filter_text.lower() not in item.text().lower())
+            if item:
+                if filter_text:
+                    table_widget.setRowHidden(row, filter_text.lower() not in item.text().lower())
+                else:
+                    table_widget.setRowHidden(row, False)
 
     def get_trade_id_from_row(self, row):
         # UUID is stored in the first column
