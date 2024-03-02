@@ -2,7 +2,7 @@ import os
 import sys
 import json
 from decimal import Decimal, ROUND_HALF_UP
-from PyQt6.QtWidgets import QApplication, QMainWindow, QWidget, QPushButton, QVBoxLayout, QHBoxLayout, QTableWidget, QHeaderView, QFileDialog, QMessageBox, QLabel, QLineEdit, QTableWidgetItem, QAbstractItemView, QStyle
+from PyQt6.QtWidgets import QApplication, QMainWindow, QWidget, QPushButton, QVBoxLayout, QHBoxLayout, QTableWidget, QHeaderView, QFileDialog, QMessageBox, QLabel, QLineEdit, QTableWidgetItem, QAbstractItemView, QStyle, QCheckBox
 from PyQt6.QtCore import Qt, QEvent
 from PyQt6.QtGui import QColor
 
@@ -101,9 +101,11 @@ class MainWindow(QMainWindow):
         # Filter UI for Positions Table
         self.positions_filter_label = QLabel("Filter:")
         self.positions_filter_text_box = QLineEdit()
+        self.hide_closed_positions_checkbox = QCheckBox("Hide Closed Positions")
         positions_filter_layout = QHBoxLayout()
         positions_filter_layout.addWidget(self.positions_filter_label)
         positions_filter_layout.addWidget(self.positions_filter_text_box)
+        positions_filter_layout.addWidget(self.hide_closed_positions_checkbox)
         positions_layout.addLayout(positions_filter_layout)
 
         # Add clear button inside QLineEdit for Positions Filter
@@ -172,8 +174,9 @@ class MainWindow(QMainWindow):
         self.main_layout.addWidget(self.tables_container)
 
         # Connect the filter's textChanged signal to the filtering function
-        self.positions_filter_text_box.textChanged.connect(lambda: self.filter_table(self.positions_table, self.positions_filter_text_box.text()))
+        self.positions_filter_text_box.textChanged.connect(lambda: self.filter_table(self.positions_table, self.positions_filter_text_box.text(), self.hide_closed_positions_checkbox.isChecked()))
         self.history_filter_text_box.textChanged.connect(lambda: self.filter_table(self.history_table, self.history_filter_text_box.text()))
+        self.hide_closed_positions_checkbox.stateChanged.connect(lambda: self.filter_table(self.positions_table, self.positions_filter_text_box.text(), self.hide_closed_positions_checkbox.isChecked()))
 
     def clear_filter(self, table_widget, filter_text_box):
         filter_text_box.clear()
@@ -401,15 +404,19 @@ class MainWindow(QMainWindow):
         except Exception as e:
             print("Error loading last used file:", e)
 
-    def filter_table(self, table_widget, filter_text):
+    def filter_table(self, table_widget, filter_text, hide_closed=False):
         for row in range(table_widget.rowCount()):
             item = table_widget.item(row, 0)
-            # Ensure there's an item and filter_text is not empty to avoid hiding everything by default
+            quantity_item = table_widget.item(row, 1)
+
+            show_row = True
             if item:
-                if filter_text:
-                    table_widget.setRowHidden(row, filter_text.lower() not in item.text().lower())
-                else:
-                    table_widget.setRowHidden(row, False)
+                if filter_text and filter_text.lower() not in item.text().lower():
+                    show_row = False
+                if hide_closed and quantity_item and quantity_item.text() == '-':
+                    show_row = False
+
+            table_widget.setRowHidden(row, not show_row)
 
     def get_trade_id_from_row(self, row):
         # UUID is stored in the first column
