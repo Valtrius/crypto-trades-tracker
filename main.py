@@ -28,12 +28,12 @@ decimal_places = Decimal('1E-8')
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Crypto Trades Tracker - " + CRYPTO_TRADES_TRACKER_VERSION)
         self.setGeometry(0, 0, 1280, 720)  # x, y, width, height
         self.center_window()
 
         self.full_history_data = []
         self.change_log = ChangeLog()
+        self.file_path = ''
 
         # Main widget and layout
         self.central_widget = QWidget()
@@ -62,17 +62,23 @@ class MainWindow(QMainWindow):
         self.button_bar = QWidget()
         self.button_bar_layout = QHBoxLayout(self.button_bar)
 
+        self.new_button = QPushButton("New")
         self.load_button = QPushButton("Load")
         self.save_button = QPushButton("Save")
+        self.save_as_button = QPushButton("Save as...")
         self.add_button = QPushButton("Add Trade")
 
         # Connect buttons to placeholder functions
+        self.new_button.clicked.connect(self.new)
         self.load_button.clicked.connect(lambda: self.load_data(None))
-        self.save_button.clicked.connect(self.save_data)
+        self.save_button.clicked.connect(self.save)
+        self.save_as_button.clicked.connect(self.save_as)
         self.add_button.clicked.connect(self.add_trade)
 
+        self.button_bar_layout.addWidget(self.new_button)
         self.button_bar_layout.addWidget(self.load_button)
         self.button_bar_layout.addWidget(self.save_button)
+        self.button_bar_layout.addWidget(self.save_as_button)
         self.button_bar_layout.addWidget(self.add_button)
 
         self.main_layout.addWidget(self.button_bar)
@@ -193,19 +199,33 @@ class MainWindow(QMainWindow):
 
                     self.update_data()
                     self.save_last_used_file_path(file_path)
-                    self.setWindowTitle(f"Crypto Trades Tracker - {CRYPTO_TRADES_TRACKER_VERSION} - {os.path.basename(file_path)}")
+                    self.update_title()
             except Exception as e:
                 QMessageBox.critical(self, "Error", f"Error loading file: {e}")
 
-    def save_data(self):
+    def new(self):
+        self.positions_table.setRowCount(0)
+        self.history_table.setRowCount(0)
+        self.save_last_used_file_path("")
+        self.update_title()
+
+    def save(self):
+        if self.file_path:
+            self.save_data(self.file_path)
+        else:
+            self.save_as()
+
+    def save_as(self):
         file_path, _ = QFileDialog.getSaveFileName(self, "Save JSON File", "", "JSON files (*.json)")
+        self.save_data(file_path)
+
+    def save_data(self, file_path):
         if file_path:
             try:
                 with open(file_path, 'w') as file:
                     json.dump(self.full_history_data, file, cls=DecimalEncoder)
                     self.save_last_used_file_path(file_path)
-
-                    self.setWindowTitle(f"Crypto Trades Tracker - {CRYPTO_TRADES_TRACKER_VERSION} - {os.path.basename(file_path)}")
+                    self.update_title()
             except Exception as e:
                 QMessageBox.critical(self, "Error", f"Error saving file: {e}")
 
@@ -369,6 +389,7 @@ class MainWindow(QMainWindow):
         # Write the updated settings back to the file
         with open(SETTINGS_FILE, 'w') as f:
             json.dump(data, f)
+            self.file_path = file_path
 
     def load_settings(self):
         try:
@@ -396,6 +417,7 @@ class MainWindow(QMainWindow):
             last_file_path = data.get('last_file_path', '')
             if last_file_path:
                 self.load_data(last_file_path)
+            self.update_title()
         except Exception as e:
             print("Error loading last used file:", e)
 
@@ -439,6 +461,12 @@ class MainWindow(QMainWindow):
         processed_history = self.change_log.process(self.full_history_data)
         self.update_history(processed_history)
         self.update_positions(processed_history)
+
+    def update_title(self):
+        if self.file_path:
+            self.setWindowTitle(f"Crypto Trades Tracker - {CRYPTO_TRADES_TRACKER_VERSION} - {os.path.basename(self.file_path)}")
+        else:
+            self.setWindowTitle(f"Crypto Trades Tracker - {CRYPTO_TRADES_TRACKER_VERSION}")
 
 
 if __name__ == "__main__":
