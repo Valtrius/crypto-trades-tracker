@@ -83,6 +83,7 @@ class ChangeLog:
 
     def process(self, file_path, original_data, change_applied=False):
         processed_data = original_data.copy()
+        applied_changes = []
 
         for change in self.changes:
             if not change['applied']:
@@ -104,6 +105,17 @@ class ChangeLog:
                     processed_data = [record for record in processed_data if record[0] != original[0]]
 
                 change['applied'] = change_applied
+
+                if change_applied:
+                    applied_changes.append(change)
+            else:
+                # Collect already applied changes in case they're needed for pruning
+                applied_changes.append(change)
+
+        # Prune to keep only the last 10 applied changes, maintaining all unapplied changes
+        last_applied_changes = applied_changes[-10:]
+        unapplied_changes = [change for change in self.changes if not change['applied']]
+        self.changes = last_applied_changes + unapplied_changes
 
         self.write_changes(file_path)
 
