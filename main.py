@@ -496,9 +496,6 @@ class MainWindow(QMainWindow):
         title = f"Crypto Trades Tracker - {CRYPTO_TRADES_TRACKER_VERSION}"
         if self.file_path:
             title += f" - {os.path.basename(self.file_path)}"
-        else:
-            title += f"Crypto Trades Tracker - {CRYPTO_TRADES_TRACKER_VERSION}"
-
         if not self.change_log.all_applied():
             title += f"*"
 
