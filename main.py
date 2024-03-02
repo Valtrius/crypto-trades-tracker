@@ -14,7 +14,6 @@ from datetime import datetime
 
 CRYPTO_TRADES_TRACKER_VERSION = '1.0.0'
 SETTINGS_FILE = 'ctt_settings.json'
-CHANGE_LOG_FILE = 'ctt_change_log.json'
 
 UUIDRole = Qt.ItemDataRole.UserRole + 1
 
@@ -187,9 +186,12 @@ class MainWindow(QMainWindow):
     def load_data(self, file_path=None):
         if file_path is None:
             file_path, _ = QFileDialog.getOpenFileName(self, "Open JSON File", "", "JSON files (*.json)")
-        if file_path:
+
+        self.save_last_used_file_path(file_path)
+
+        if self.file_path:
             try:
-                with open(file_path, 'r') as file:
+                with open(self.file_path, 'r') as file:
                     self.full_history_data = json.load(file)
 
                     # Convert specific fields back to Decimal
@@ -197,16 +199,18 @@ class MainWindow(QMainWindow):
                         row[4] = Decimal(row[4])  # Quantity is at index 4
                         row[5] = Decimal(row[5])  # Price is at index 5
 
+                    self.load_changes_with_prompt()
                     self.update_data()
-                    self.save_last_used_file_path(file_path)
                     self.update_title()
             except Exception as e:
                 QMessageBox.critical(self, "Error", f"Error loading file: {e}")
 
     def new(self):
-        self.positions_table.setRowCount(0)
-        self.history_table.setRowCount(0)
+        self.full_history_data = []
+
         self.save_last_used_file_path("")
+        self.load_changes_with_prompt()
+        self.update_data()
         self.update_title()
 
     def save(self):
@@ -223,7 +227,8 @@ class MainWindow(QMainWindow):
         if file_path:
             try:
                 with open(file_path, 'w') as file:
-                    json.dump(self.full_history_data, file, cls=DecimalEncoder)
+                    processed_history = self.change_log.process(self.file_path, self.full_history_data, True)
+                    json.dump(processed_history, file, indent=2, cls=DecimalEncoder)
                     self.save_last_used_file_path(file_path)
                     self.update_title()
             except Exception as e:
@@ -242,8 +247,10 @@ class MainWindow(QMainWindow):
         if trade_dialog.exec():
             new_data = trade_dialog.new_data
             if new_data:
-                self.change_log.add('add', None, new_data)
+                self.change_log.add(self.file_path, 'add', None, new_data)
                 self.update_data()
+
+        self.update_title()
 
     def edit_trade(self):
         selected_items = self.history_table.selectedItems()
@@ -259,8 +266,10 @@ class MainWindow(QMainWindow):
         if trade_dialog.exec():
             edited_data = trade_dialog.new_data
             if edited_data and edited_data[1:] != trade_data[:-1]:
-                self.change_log.add('edit', [edited_data[0]] + trade_data[:-1], edited_data)
+                self.change_log.add(self.file_path, 'edit', [edited_data[0]] + trade_data[:-1], edited_data)
                 self.update_data()
+
+        self.update_title()
 
     def delete_trade(self):
         selected_rows = self.history_table.selectionModel().selectedRows()
@@ -283,9 +292,11 @@ class MainWindow(QMainWindow):
 
                         original_data = [trade_id, pair_item.text(), side_item.text(), date_item.text(), quantity, price]
 
-                        self.change_log.add('delete', original_data, None)
+                        self.change_log.add(self.file_path, 'delete', original_data, None)
 
                 self.update_data()
+
+        self.update_title()
 
     def add_history_row(self, row):
         value = (Decimal(row[4]) * Decimal(row[5])).quantize(decimal_places, ROUND_HALF_UP)
@@ -388,7 +399,7 @@ class MainWindow(QMainWindow):
 
         # Write the updated settings back to the file
         with open(SETTINGS_FILE, 'w') as f:
-            json.dump(data, f)
+            json.dump(data, f, indent=2, cls=DecimalEncoder)
             self.file_path = file_path
 
     def load_settings(self):
@@ -406,7 +417,7 @@ class MainWindow(QMainWindow):
         if not version:
             data['version'] = CRYPTO_TRADES_TRACKER_VERSION
             with open(SETTINGS_FILE, 'w') as f:
-                json.dump(data, f)
+                json.dump(data, f, indent=2, cls=DecimalEncoder)
         elif version != CRYPTO_TRADES_TRACKER_VERSION:
             QMessageBox.critical(self, "Error", f"Settings version: {version}\nCurrent version: {CRYPTO_TRADES_TRACKER_VERSION}")
 
@@ -414,12 +425,31 @@ class MainWindow(QMainWindow):
         try:
             with open(SETTINGS_FILE, 'r') as f:
                 data = json.load(f)
-            last_file_path = data.get('last_file_path', '')
-            if last_file_path:
-                self.load_data(last_file_path)
+            self.file_path = data.get('last_file_path', '')
+            if self.file_path:
+                self.load_data(self.file_path)
+            else:
+                self.load_changes_with_prompt()
+            self.update_data()
             self.update_title()
         except Exception as e:
             print("Error loading last used file:", e)
+
+    def load_changes_with_prompt(self):
+        all_applied = self.change_log.load(self.file_path)
+        if not all_applied:
+            # Ask the user if they want to keep where they left off
+            response = QMessageBox.question(
+                self,
+                "Unapplied Changes Detected",
+                "Oopsie, you were doing something that hasn't been saved!\n"
+                "Would you like to recover the modifications?",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.Yes
+            )
+
+            if response == QMessageBox.StandardButton.No:
+                self.change_log.clear_not_applied(self.file_path)
 
     def filter_table(self, table_widget, filter_text, hide_closed=False):
         for row in range(table_widget.rowCount()):
@@ -458,15 +488,43 @@ class MainWindow(QMainWindow):
         return super().eventFilter(source, event)  # Pass the event to the base class method
 
     def update_data(self):
-        processed_history = self.change_log.process(self.full_history_data)
+        processed_history = self.change_log.process(self.file_path, self.full_history_data)
         self.update_history(processed_history)
         self.update_positions(processed_history)
 
     def update_title(self):
+        title = f"Crypto Trades Tracker - {CRYPTO_TRADES_TRACKER_VERSION}"
         if self.file_path:
-            self.setWindowTitle(f"Crypto Trades Tracker - {CRYPTO_TRADES_TRACKER_VERSION} - {os.path.basename(self.file_path)}")
+            title += f" - {os.path.basename(self.file_path)}"
         else:
-            self.setWindowTitle(f"Crypto Trades Tracker - {CRYPTO_TRADES_TRACKER_VERSION}")
+            title += f"Crypto Trades Tracker - {CRYPTO_TRADES_TRACKER_VERSION}"
+
+        if not self.change_log.all_applied():
+            title += f"*"
+
+        self.setWindowTitle(title)
+
+    def closeEvent(self, event):
+        # Check if there are unapplied changes
+        if not self.change_log.all_applied():
+            # Ask the user if they want to save the changes
+            response = QMessageBox.question(
+                self,
+                "Save Changes",
+                "You have unsaved changes. Would you like to save them before exiting?",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No | QMessageBox.StandardButton.Cancel,
+            )
+
+            if response == QMessageBox.StandardButton.Yes:
+                self.save()
+                event.accept()
+            elif response == QMessageBox.StandardButton.No:
+                self.change_log.clear_not_applied(self.file_path)
+                event.accept()
+            else:
+                event.ignore()
+        else:
+            event.accept()
 
 
 if __name__ == "__main__":
