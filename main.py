@@ -18,11 +18,8 @@ CHANGE_LOG_FILE = 'ctt_change_log.json'
 
 UUIDRole = Qt.ItemDataRole.UserRole + 1
 
-# Define pastel colors
-dark_green = QColor(0, 100, 0)
-dark_red = QColor(139, 0, 0)
-pastel_green = QColor(152, 251, 152)
-pastel_red = QColor(255, 182, 193)
+green = QColor(0, 196, 0, 32)
+red = QColor(196, 0, 0, 32)
 
 # Set the desired precision: 8 decimal places
 decimal_places = Decimal('1E-8')
@@ -279,7 +276,7 @@ class MainWindow(QMainWindow):
         self.history_table.insertRow(table_row)
 
         # Determine the color based on the 'Side' value
-        row_color = dark_green if row[2] == 'Buy' else dark_red if row[2] == 'Sell' else None
+        row_color = green if row[2] == 'Buy' else red if row[2] == 'Sell' else None
 
         # Insert cells, skipping UUID
         for col_index in range(1, 7):  # Adjust for skipping UUID and include Value
