@@ -23,8 +23,6 @@ red = QColor(196, 0, 0, 32)
 
 # Set the desired precision: 8 decimal places
 decimal_places = Decimal('1E-8')
-# Initialize a list to store all history data
-full_history_data = []
 
 
 class MainWindow(QMainWindow):
@@ -34,6 +32,7 @@ class MainWindow(QMainWindow):
         self.setGeometry(0, 0, 1280, 720)  # x, y, width, height
         self.center_window()
 
+        self.full_history_data = []
         self.change_log = ChangeLog()
 
         # Main widget and layout
@@ -185,11 +184,10 @@ class MainWindow(QMainWindow):
         if file_path:
             try:
                 with open(file_path, 'r') as file:
-                    global full_history_data
-                    full_history_data = json.load(file)
+                    self.full_history_data = json.load(file)
 
                     # Convert specific fields back to Decimal
-                    for row in full_history_data:
+                    for row in self.full_history_data:
                         row[4] = Decimal(row[4])  # Quantity is at index 4
                         row[5] = Decimal(row[5])  # Price is at index 5
 
@@ -204,7 +202,7 @@ class MainWindow(QMainWindow):
         if file_path:
             try:
                 with open(file_path, 'w') as file:
-                    json.dump(full_history_data, file, cls=DecimalEncoder)
+                    json.dump(self.full_history_data, file, cls=DecimalEncoder)
                     self.save_last_used_file_path(file_path)
 
                     self.setWindowTitle(f"Crypto Trades Tracker - {CRYPTO_TRADES_TRACKER_VERSION} - {os.path.basename(file_path)}")
@@ -309,7 +307,7 @@ class MainWindow(QMainWindow):
         self.positions_table.setSortingEnabled(False)
         self.positions_table.setRowCount(0)  # Clear existing rows
 
-        # Sort full_history_data by date (assuming date is at index 3)
+        # Sort self.full_history_data by date (date is at index 3)
         sorted_history_data = sorted(history_data, key=lambda x: datetime.strptime(x[3], '%Y-%m-%d'))
 
         history = {}
@@ -438,7 +436,7 @@ class MainWindow(QMainWindow):
         return super().eventFilter(source, event)  # Pass the event to the base class method
 
     def update_data(self):
-        processed_history = self.change_log.process(full_history_data)
+        processed_history = self.change_log.process(self.full_history_data)
         self.update_history(processed_history)
         self.update_positions(processed_history)
 
