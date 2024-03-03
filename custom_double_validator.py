@@ -1,4 +1,4 @@
-from PyQt6.QtGui import QDoubleValidator, QValidator
+from PyQt6.QtGui import QDoubleValidator
 from PyQt6.QtCore import QLocale
 
 
