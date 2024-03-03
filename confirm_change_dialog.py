@@ -10,7 +10,7 @@ class ConfirmChangeDialog(QDialog):
     def __init__(self, change_data, change_string, parent=None):
         super().__init__(parent)
         self.setWindowTitle(f"Confirm {change_string}")
-        self.setFixedSize(600, 200)  # Adjust size as needed
+        self.setFixedSize(600, 230)
 
         # Determine change type and adjust the dialog accordingly
         change_type = change_data.get("change_type", "")
@@ -66,12 +66,11 @@ class ConfirmChangeDialog(QDialog):
 
     def create_table(self, change_data):
         table = QTableWidget(1, 5)  # Single row, 5 columns
+        table.setHorizontalHeaderLabels(["Pair", "Side", "Date", "Quantity", "Price"])
         table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
-        table.horizontalHeader().setVisible(False)
         table.verticalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
         table.verticalHeader().setVisible(False)
         table.setEnabled(False)
-        table.setStyleSheet("QTableWidget::item:selected { background-color: transparent; }")
 
         if change_data:
             row_color = green if change_data[1] == 'Buy' else red if change_data[1] == 'Sell' else None

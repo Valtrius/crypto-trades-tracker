@@ -8,7 +8,8 @@ from PyQt6.QtGui import QShortcut, QKeySequence
 
 from decimal_table_widget_item import DecimalTableWidgetItem
 from decimal_encoder import DecimalEncoder
-from trade_dialog import TradeDialog
+from add_trade_dialog import AddTradeDialog
+from edit_trade_dialog import EditTradeDialog
 from change_log import ChangeLog
 from datetime import datetime
 from confirm_change_dialog import ConfirmChangeDialog
@@ -48,6 +49,9 @@ class MainWindow(QMainWindow):
 
         # Load last data
         self.load_last_used_file()
+
+        # Install event filter
+        self.installEventFilter(self)
 
     def center_window(self):
         # Get the screen's resolution
@@ -262,7 +266,7 @@ class MainWindow(QMainWindow):
             selected_pair_item = self.positions_table.item(selected_row_index, 0)
             selected_pair = selected_pair_item.text()
 
-        trade_dialog = TradeDialog(self, selected_pair)
+        trade_dialog = AddTradeDialog(self, selected_pair)
         if trade_dialog.exec():
             new_data = trade_dialog.new_data
             if new_data:
@@ -278,7 +282,7 @@ class MainWindow(QMainWindow):
         selected_row = self.history_table.currentRow()
         trade_data = [self.history_table.item(selected_row, col).text() for col in range(self.history_table.columnCount())]
 
-        trade_dialog = TradeDialog(self, None, trade_data[:-1], self.get_trade_id_from_row(selected_row))
+        trade_dialog = EditTradeDialog(trade_data[:-1], self.get_trade_id_from_row(selected_row), self)
         trade_data[3] = Decimal(trade_data[3])
         trade_data[4] = Decimal(trade_data[4])
 
@@ -500,6 +504,10 @@ class MainWindow(QMainWindow):
         return None
 
     def eventFilter(self, source, event):
+        if event.type() == QEvent.Type.KeyPress and event.key() == Qt.Key.Key_Escape:
+            self.positions_table.clearSelection()
+            self.history_table.clearSelection()
+            return True
         if event.type() == QEvent.Type.KeyPress and source is self.history_table:
             if event.key() == Qt.Key.Key_Delete:
                 self.delete_trade()
