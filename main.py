@@ -4,21 +4,20 @@ import json
 from decimal import Decimal, ROUND_HALF_UP
 from PyQt6.QtWidgets import QApplication, QMainWindow, QWidget, QPushButton, QVBoxLayout, QHBoxLayout, QTableWidget, QHeaderView, QFileDialog, QMessageBox, QLabel, QLineEdit, QTableWidgetItem, QAbstractItemView, QStyle, QCheckBox
 from PyQt6.QtCore import Qt, QEvent
-from PyQt6.QtGui import QColor
+from PyQt6.QtGui import QColor, QShortcut, QKeySequence
 
 from decimal_table_widget_item import DecimalTableWidgetItem
 from decimal_encoder import DecimalEncoder
 from trade_dialog import TradeDialog
 from change_log import ChangeLog
 from datetime import datetime
+from confirm_change_dialog import ConfirmChangeDialog
+from constants import red, green
 
 CRYPTO_TRADES_TRACKER_VERSION = '1.0.0'
 SETTINGS_FILE = 'ctt_settings.json'
 
 UUIDRole = Qt.ItemDataRole.UserRole + 1
-
-green = QColor(0, 196, 0, 32)
-red = QColor(196, 0, 0, 32)
 
 # Set the desired precision: 8 decimal places
 decimal_places = Decimal('1E-8')
@@ -42,6 +41,7 @@ class MainWindow(QMainWindow):
         # Setup UI components
         self.setup_button_bar()
         self.setup_tables()
+        self.setup_shortcuts()
 
         # Load settings
         self.load_settings()
@@ -178,6 +178,23 @@ class MainWindow(QMainWindow):
         self.positions_filter_text_box.textChanged.connect(lambda: self.filter_table(self.positions_table, self.positions_filter_text_box.text(), self.hide_closed_positions_checkbox.isChecked()))
         self.history_filter_text_box.textChanged.connect(lambda: self.filter_table(self.history_table, self.history_filter_text_box.text()))
         self.hide_closed_positions_checkbox.stateChanged.connect(lambda: self.filter_table(self.positions_table, self.positions_filter_text_box.text(), self.hide_closed_positions_checkbox.isChecked()))
+
+    def setup_shortcuts(self):
+        # Save shortcut: CTRL-S
+        save_shortcut = QShortcut(QKeySequence('Ctrl+S'), self)
+        save_shortcut.activated.connect(self.save)
+
+        # Save as shortcut: CTRL-SHIFT-S
+        save_as_shortcut = QShortcut(QKeySequence('Ctrl+Shift+S'), self)
+        save_as_shortcut.activated.connect(self.save_as)
+
+        # Undo shortcut: CTRL-Z
+        undo_shortcut = QShortcut(QKeySequence('Ctrl+Z'), self)
+        undo_shortcut.activated.connect(self.undo_last_change)
+
+        # Undo shortcut: CTRL-Y
+        redo_shortcut = QShortcut(QKeySequence('Ctrl+Y'), self)
+        redo_shortcut.activated.connect(self.redo_next_change)
 
     def clear_filter(self, table_widget, filter_text_box):
         filter_text_box.clear()
@@ -436,8 +453,8 @@ class MainWindow(QMainWindow):
             print("Error loading last used file:", e)
 
     def load_changes_with_prompt(self):
-        all_applied = self.change_log.load(self.file_path)
-        if not all_applied:
+        self.change_log.load(self.file_path)
+        if not self.change_log.all_applied():
             # Ask the user if they want to keep where they left off
             response = QMessageBox.question(
                 self,
@@ -522,6 +539,26 @@ class MainWindow(QMainWindow):
                 event.ignore()
         else:
             event.accept()
+
+    def undo_last_change(self):
+        last_change = self.change_log.get_last_to_undo()
+        if last_change is not None:
+            dialog = ConfirmChangeDialog(last_change, "undo")
+
+            if dialog.get_result():
+                self.change_log.undo()
+                self.update_data()
+                self.update_title()
+
+    def redo_next_change(self):
+        next_change = self.change_log.get_next_to_redo()
+        if next_change is not None:
+            dialog = ConfirmChangeDialog(next_change, "redo")
+
+            if dialog.get_result():
+                self.change_log.redo()
+                self.update_data()
+                self.update_title()
 
 
 if __name__ == "__main__":

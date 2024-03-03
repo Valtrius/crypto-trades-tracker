@@ -11,7 +11,7 @@ class ChangeLog:
         self.changes = []
 
     def all_applied(self):
-        return all(change.get('applied', False) for change in self.changes)
+        return all(change.get('applied', True) != change.get('undone', True) for change in self.changes)
 
     def load(self, file_path):
         try:
@@ -19,7 +19,6 @@ class ChangeLog:
                 data = json.load(f)
                 # Check if the specific file_path key exists in the data
                 if file_path in data:
-                    applied = True
                     # Process each change to convert specific columns to Decimal
                     for change in data[file_path]:
                         if 'new_data' in change and change['new_data'] is not None:
@@ -28,11 +27,7 @@ class ChangeLog:
                         if 'original_data' in change and change['original_data'] is not None:
                             change['original_data'][4] = Decimal(change['original_data'][4])
                             change['original_data'][5] = Decimal(change['original_data'][5])
-                        if 'applied' in change and change['applied'] is False:
-                            applied = False
                     self.changes = data[file_path]
-
-                    return applied
                 else:
                     # If file_path is not in data, initialize it with an empty list
                     data[file_path] = []
@@ -55,14 +50,14 @@ class ChangeLog:
                 json.dump(data, f, indent=2, cls=DecimalEncoder)
             self.changes = data[file_path]
 
-        return True
-
     def add(self, file_path, change_type, original_data=None, new_data=None):
+        self.changes = [change for change in self.changes if not change['undone']]
         self.changes.append({
             'change_type': change_type,
             'original_data': original_data,
             'new_data': new_data,
-            'applied': False
+            'applied': False,
+            'undone': False
         })
         self.write_changes(file_path)
 
@@ -86,7 +81,8 @@ class ChangeLog:
         applied_changes = []
 
         for change in self.changes:
-            if not change['applied']:
+            # Not applied and not undone -> apply them
+            if not change['applied'] and not change['undone']:
                 change_type = change['change_type']
                 original = change['original_data']
                 new = change['new_data']
@@ -106,11 +102,15 @@ class ChangeLog:
 
                 change['applied'] = change_applied
 
-                if change_applied:
-                    applied_changes.append(change)
-            else:
-                # Collect already applied changes in case they're needed for pruning
+            # Applied and not undone -> pruning
+            elif change['applied'] and not change['undone']:
                 applied_changes.append(change)
+
+            # Applied and undone -> unapply
+            elif change['applied'] and change['undone']:
+                change['applied'] = False
+
+            # Not applied and undone -> do nothing
 
         # Prune to keep only the last 10 applied changes, maintaining all unapplied changes
         last_applied_changes = applied_changes[-10:]
@@ -122,5 +122,31 @@ class ChangeLog:
         return processed_data
 
     def clear_not_applied(self, file_path):
-        self.changes = [change for change in self.changes if change.get('applied', False)]
+        for change in self.changes:
+            if not change.get('applied', False):
+                change['undone'] = True
         self.write_changes(file_path)
+
+    def get_last_to_undo(self):
+        # Iterate through self.changes in reverse to find the last change that has not been undone
+        for change in reversed(self.changes):
+            if not change.get('undone', False):
+                return change
+        return None
+
+    def get_next_to_redo(self):
+        # Iterate through self.changes to find the last change that has been undone
+        for change in self.changes:
+            if change.get('undone', True):
+                return change
+        return None
+
+    def undo(self):
+        last_change_to_undo = self.get_last_to_undo()
+        if last_change_to_undo is not None:
+            last_change_to_undo['undone'] = True
+
+    def redo(self):
+        last_change_to_undo = self.get_next_to_redo()
+        if last_change_to_undo is not None:
+            last_change_to_undo['undone'] = False
