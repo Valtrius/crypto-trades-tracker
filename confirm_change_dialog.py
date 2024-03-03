@@ -41,9 +41,9 @@ class ConfirmChangeDialog(QDialog):
         if table1:
             layout.addWidget(table1)
 
-        arrow_label = QLabel("↓")  # You can increase the font size if needed
+        arrow_label = QLabel("↓")
         font = QFont()
-        font.setPointSize(24)  # Set the font size as needed (24 is just an example)
+        font.setPointSize(24)
         font.setBold(True)
         arrow_label.setFont(font)
         arrow_label.setAlignment(Qt.AlignmentFlag.AlignCenter)  # Center align the arrow
