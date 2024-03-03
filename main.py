@@ -272,9 +272,9 @@ class MainWindow(QMainWindow):
         trade_dialog = AddTradeDialog(self, selected_pair)
         if trade_dialog.exec():
             new_data = trade_dialog.new_data
-            if new_data:
-                self.change_log.add(self.file_path, 'add', None, new_data)
-                self.update_data()
+            for data in new_data:
+                self.change_log.add(self.file_path, 'add', None, data)
+            self.update_data()
 
         self.update_title()
 
