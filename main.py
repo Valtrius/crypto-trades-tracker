@@ -4,7 +4,7 @@ import json
 from decimal import Decimal, ROUND_HALF_UP
 from PyQt6.QtWidgets import QApplication, QMainWindow, QWidget, QPushButton, QVBoxLayout, QHBoxLayout, QTableWidget, QHeaderView, QFileDialog, QMessageBox, QLabel, QLineEdit, QTableWidgetItem, QAbstractItemView, QStyle, QCheckBox
 from PyQt6.QtCore import Qt, QEvent
-from PyQt6.QtGui import QColor, QShortcut, QKeySequence
+from PyQt6.QtGui import QShortcut, QKeySequence
 
 from decimal_table_widget_item import DecimalTableWidgetItem
 from decimal_encoder import DecimalEncoder

@@ -1,6 +1,6 @@
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QFont
-from PyQt6.QtWidgets import QDialog, QVBoxLayout, QPushButton, QHBoxLayout, QTableWidget, QTableWidgetItem, QLabel, QGridLayout, QHeaderView
+from PyQt6.QtWidgets import QDialog, QVBoxLayout, QPushButton, QHBoxLayout, QTableWidget, QTableWidgetItem, QLabel, QHeaderView
 from decimal_table_widget_item import DecimalTableWidgetItem
 
 from constants import red, green, light_gray

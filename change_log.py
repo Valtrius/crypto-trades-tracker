@@ -1,4 +1,3 @@
-import os
 import json
 from decimal_encoder import DecimalEncoder
 from decimal import Decimal
