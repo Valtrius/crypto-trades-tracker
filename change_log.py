@@ -3,6 +3,7 @@ from decimal_encoder import DecimalEncoder
 from decimal import Decimal
 
 CHANGE_LOG_FILE = 'ctt_change_log.json'
+CHANGE_LOG_VERSION = '1.0.0'
 
 
 class ChangeLog:
@@ -16,8 +17,10 @@ class ChangeLog:
         try:
             with open(CHANGE_LOG_FILE, 'r') as f:
                 data = json.load(f)
+                if 'version' in data and data['version'] != CHANGE_LOG_VERSION:
+                    self.create_new_file(file_path)
                 # Check if the specific file_path key exists in the data
-                if file_path in data:
+                elif file_path in data:
                     # Process each change to convert specific columns to Decimal
                     for change in data[file_path]:
                         if 'new_data' in change and change['new_data'] is not None:
@@ -36,18 +39,18 @@ class ChangeLog:
                         json.dump(data, fw, indent=2, cls=DecimalEncoder)
         except FileNotFoundError:
             # If the file does not exist, create it with an empty list for file_path
-            data = {file_path: []}
-            with open(CHANGE_LOG_FILE, 'w') as f:
-                json.dump(data, f, indent=2, cls=DecimalEncoder)
-            self.changes = data[file_path]
+            self.create_new_file(file_path)
         except json.JSONDecodeError:
             # Handle case where file is not valid JSON
             print(f"Error reading {CHANGE_LOG_FILE}. File is not valid JSON.")
-            # Optionally, create/reset the file with empty data for file_path
-            data = {file_path: []}
-            with open(CHANGE_LOG_FILE, 'w') as f:
-                json.dump(data, f, indent=2, cls=DecimalEncoder)
-            self.changes = data[file_path]
+            # Reset the file with empty data for file_path
+            self.create_new_file(file_path)
+
+    def create_new_file(self, file_path):
+        data = {"version": CHANGE_LOG_VERSION, file_path: []}
+        with open(CHANGE_LOG_FILE, 'w') as f:
+            json.dump(data, f, indent=2, cls=DecimalEncoder)
+        self.changes = data[file_path]
 
     def add(self, file_path, change_type, original_data=None, new_data=None):
         self.changes = [change for change in self.changes if not change['undone']]
