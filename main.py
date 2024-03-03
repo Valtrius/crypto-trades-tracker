@@ -4,7 +4,7 @@ import json
 from decimal import Decimal, ROUND_HALF_UP
 from PyQt6.QtWidgets import QApplication, QMainWindow, QWidget, QPushButton, QVBoxLayout, QHBoxLayout, QTableWidget, QHeaderView, QFileDialog, QMessageBox, QLabel, QLineEdit, QTableWidgetItem, QAbstractItemView, QStyle, QCheckBox
 from PyQt6.QtCore import Qt, QEvent
-from PyQt6.QtGui import QShortcut, QKeySequence
+from PyQt6.QtGui import QShortcut, QKeySequence, QIcon, QPixmap
 
 from decimal_table_widget_item import DecimalTableWidgetItem
 from decimal_encoder import DecimalEncoder
@@ -28,6 +28,9 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setGeometry(0, 0, 1280, 720)  # x, y, width, height
+        icon = QIcon()
+        icon.addPixmap(QPixmap("resource/bitcoin.png"), QIcon.Mode.Normal, QIcon.State.Off)
+        self.setWindowIcon(icon)
         self.center_window()
 
         self.full_history_data = []
