@@ -71,12 +71,21 @@ class MainWindow(QMainWindow):
         toolbar = QToolBar("Main Toolbar")
         self.addToolBar(toolbar)
 
-        # Left-aligned actions
+        # Actions
         new_action = QAction("New", self)
         load_action = QAction("Open", self)
         save_action = QAction("Save", self)
         save_as_action = QAction("Save As...", self)
         add_trade_action = QAction("Add Trade", self)
+        help_action = QAction("?", self)
+        donate_action = QAction("Donate", self)
+
+        # Shortcuts
+        new_action.setShortcut(QKeySequence.StandardKey.New)
+        load_action.setShortcut(QKeySequence.StandardKey.Open)
+        save_action.setShortcut(QKeySequence.StandardKey.Save)
+        save_as_action.setShortcut("CTRL+SHIFT+S")
+        help_action.setShortcut(QKeySequence.StandardKey.HelpContents)
 
         # Connect actions
         new_action.triggered.connect(self.new)
@@ -84,8 +93,10 @@ class MainWindow(QMainWindow):
         save_action.triggered.connect(self.save)
         save_as_action.triggered.connect(self.save_as)
         add_trade_action.triggered.connect(self.add_trade)
+        help_action.triggered.connect(self.help)
+        donate_action.triggered.connect(self.donate)
 
-        # Add actions to Toolbar
+        # Left-aligned actions
         toolbar.addAction(new_action)
         toolbar.addAction(load_action)
         toolbar.addAction(save_action)
@@ -98,16 +109,8 @@ class MainWindow(QMainWindow):
         toolbar.addWidget(spacer)
 
         # Right-aligned actions
-        help_action = QAction("?", self)
-        donate_action = QAction("Donate", self)
-
-        # Adding actions to the right
         toolbar.addAction(help_action)
         toolbar.addAction(donate_action)
-
-        # Connect actions
-        help_action.triggered.connect(self.help)
-        donate_action.triggered.connect(self.donate)
 
     def setup_tables(self):
         # Main container for all tables and their titles
@@ -208,15 +211,9 @@ class MainWindow(QMainWindow):
         self.history_filter_text_box.textChanged.connect(lambda: self.filter_table(self.history_table, self.history_filter_text_box.text()))
         self.hide_closed_positions_checkbox.stateChanged.connect(lambda: self.filter_table(self.positions_table, self.positions_filter_text_box.text(), self.hide_closed_positions_checkbox.isChecked()))
 
+        self.positions_table.setFocus()
+
     def setup_shortcuts(self):
-        # Save shortcut: CTRL-S
-        save_shortcut = QShortcut(QKeySequence('Ctrl+S'), self)
-        save_shortcut.activated.connect(self.save)
-
-        # Save as shortcut: CTRL-SHIFT-S
-        save_as_shortcut = QShortcut(QKeySequence('Ctrl+Shift+S'), self)
-        save_as_shortcut.activated.connect(self.save_as)
-
         # Undo shortcut: CTRL-Z
         undo_shortcut = QShortcut(QKeySequence('Ctrl+Z'), self)
         undo_shortcut.activated.connect(self.undo_last_change)
@@ -233,9 +230,9 @@ class MainWindow(QMainWindow):
         if file_path is None:
             file_path, _ = QFileDialog.getOpenFileName(self, "Open JSON File", "", "JSON files (*.json)")
 
-        self.save_last_used_file_path(file_path)
+        if file_path:
+            self.save_last_used_file_path(file_path)
 
-        if self.file_path:
             if not self.check_data_file_version(file_path):
                 return
 
