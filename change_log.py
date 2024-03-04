@@ -3,7 +3,7 @@ from decimal_encoder import DecimalEncoder
 from decimal import Decimal
 
 CHANGE_LOG_FILE = 'ctt_change_log.json'
-CHANGE_LOG_VERSION = '1.0.0'
+CHANGE_LOG_VERSION = '1'
 
 
 class ChangeLog:
@@ -17,10 +17,14 @@ class ChangeLog:
         try:
             with open(CHANGE_LOG_FILE, 'r') as f:
                 data = json.load(f)
+                # If version isn't correct, erase file and start from scratch, it doesn't matter for change log
                 if 'version' in data and data['version'] != CHANGE_LOG_VERSION:
                     self.create_new_file(file_path)
+                elif 'version' not in data:
+                    data['version'] = CHANGE_LOG_VERSION
+
                 # Check if the specific file_path key exists in the data
-                elif file_path in data:
+                if file_path in data:
                     # Process each change to convert specific columns to Decimal
                     for change in data[file_path]:
                         if 'new_data' in change and change['new_data'] is not None:

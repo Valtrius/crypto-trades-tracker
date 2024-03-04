@@ -1,4 +1,3 @@
-from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QPalette
 from PyQt6.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QLineEdit, QPushButton, QMessageBox, QTableWidget, QHeaderView, QComboBox
 from datetime import datetime

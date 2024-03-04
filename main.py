@@ -16,6 +16,7 @@ from confirm_change_dialog import ConfirmChangeDialog
 from constants import red, green
 
 CRYPTO_TRADES_TRACKER_VERSION = '1.0.0'
+DATA_FILE_VERSION = '1'
 SETTINGS_FILE = 'ctt_settings.json'
 
 UUIDRole = Qt.ItemDataRole.UserRole + 1
@@ -36,6 +37,8 @@ class MainWindow(QMainWindow):
         self.full_history_data = []
         self.change_log = ChangeLog()
         self.file_path = ''
+
+        self.update_title()
 
         # Main widget and layout
         self.central_widget = QWidget()
@@ -213,12 +216,16 @@ class MainWindow(QMainWindow):
         if file_path is None:
             file_path, _ = QFileDialog.getOpenFileName(self, "Open JSON File", "", "JSON files (*.json)")
 
+        if not self.check_data_file_version(file_path):
+            return
+
         self.save_last_used_file_path(file_path)
 
         if self.file_path:
             try:
                 with open(self.file_path, 'r') as file:
-                    self.full_history_data = json.load(file)
+                    data = json.load(file)
+                    self.full_history_data = data['data'] if data['data'] else []
 
                     # Convert specific fields back to Decimal
                     for row in self.full_history_data:
@@ -250,15 +257,17 @@ class MainWindow(QMainWindow):
         self.save_data(file_path)
 
     def save_data(self, file_path):
-        if file_path:
-            try:
-                with open(file_path, 'w') as file:
-                    processed_history = self.change_log.process(self.file_path, self.full_history_data, True)
-                    json.dump(processed_history, file, indent=2, cls=DecimalEncoder)
-                    self.save_last_used_file_path(file_path)
-                    self.update_title()
-            except Exception as e:
-                QMessageBox.critical(self, "Error", f"Error saving file: {e}")
+        self.check_data_file_version(file_path)
+
+        try:
+            with open(file_path, 'w') as file:
+                processed_history = self.change_log.process(self.file_path, self.full_history_data, True)
+                data = {"version": DATA_FILE_VERSION, "data": processed_history}
+                json.dump(data, file, indent=2, cls=DecimalEncoder)
+                self.save_last_used_file_path(file_path)
+                self.update_title()
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Error saving file: {e}")
 
     def add_trade(self):
         # Get the currently selected pair from positions_table
@@ -572,6 +581,31 @@ class MainWindow(QMainWindow):
                 self.change_log.redo()
                 self.update_data()
                 self.update_title()
+
+    def check_data_file_version(self, file_path):
+        # Try to read the existing data
+        try:
+            with open(file_path, 'r') as file:
+                data = json.load(file)
+        except FileNotFoundError:
+            # File doesn't exist, create a new structure
+            data = {}
+        except json.JSONDecodeError:
+            # File exists but is not valid JSON, start afresh
+            data = {}
+
+        # Check and update the version
+        if "version" not in data:
+            data["version"] = DATA_FILE_VERSION
+            with open(file_path, 'w') as file:
+                json.dump(data, file, indent=2, cls=DecimalEncoder)
+            return True
+        elif data["version"] == DATA_FILE_VERSION:
+            return True
+        else:
+            QMessageBox.critical(self, "Error", f"Wrong file version: {file_path} - {data["version"]} instead of {DATA_FILE_VERSION}")
+            return False
+            # Eventually add migration to future versions
 
 
 if __name__ == "__main__":
