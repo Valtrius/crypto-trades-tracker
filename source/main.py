@@ -30,7 +30,7 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.setGeometry(0, 0, 1280, 720)  # x, y, width, height
         icon = QIcon()
-        icon.addPixmap(QPixmap("resource/bitcoin.png"), QIcon.Mode.Normal, QIcon.State.Off)
+        icon.addPixmap(QPixmap("../resource/bitcoin.png"), QIcon.Mode.Normal, QIcon.State.Off)
         self.setWindowIcon(icon)
         self.center_window()
 
