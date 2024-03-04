@@ -2,9 +2,9 @@ import os
 import sys
 import json
 from decimal import Decimal, ROUND_HALF_UP
-from PyQt6.QtWidgets import QApplication, QMainWindow, QWidget, QPushButton, QVBoxLayout, QHBoxLayout, QTableWidget, QHeaderView, QFileDialog, QMessageBox, QLabel, QLineEdit, QTableWidgetItem, QAbstractItemView, QStyle, QCheckBox
+from PyQt6.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QTableWidget, QHeaderView, QFileDialog, QMessageBox, QLabel, QLineEdit, QTableWidgetItem, QAbstractItemView, QStyle, QCheckBox, QToolBar, QSizePolicy
 from PyQt6.QtCore import Qt, QEvent
-from PyQt6.QtGui import QShortcut, QKeySequence, QIcon, QPixmap
+from PyQt6.QtGui import QShortcut, QKeySequence, QIcon, QPixmap, QAction
 
 from decimal_table_widget_item import DecimalTableWidgetItem
 from decimal_encoder import DecimalEncoder
@@ -68,29 +68,46 @@ class MainWindow(QMainWindow):
         self.move(x, y)
 
     def setup_button_bar(self):
-        self.button_bar = QWidget()
-        self.button_bar_layout = QHBoxLayout(self.button_bar)
+        toolbar = QToolBar("Main Toolbar")
+        self.addToolBar(toolbar)
 
-        self.new_button = QPushButton("New")
-        self.load_button = QPushButton("Load")
-        self.save_button = QPushButton("Save")
-        self.save_as_button = QPushButton("Save as...")
-        self.add_button = QPushButton("Add Trade")
+        # Left-aligned actions
+        new_action = QAction("New", self)
+        load_action = QAction("Open", self)
+        save_action = QAction("Save", self)
+        save_as_action = QAction("Save As...", self)
+        add_trade_action = QAction("Add Trade", self)
 
-        # Connect buttons to placeholder functions
-        self.new_button.clicked.connect(self.new)
-        self.load_button.clicked.connect(lambda: self.load_data(None))
-        self.save_button.clicked.connect(self.save)
-        self.save_as_button.clicked.connect(self.save_as)
-        self.add_button.clicked.connect(self.add_trade)
+        # Connect actions
+        new_action.triggered.connect(self.new)
+        load_action.triggered.connect(lambda: self.load_data(None))
+        save_action.triggered.connect(self.save)
+        save_as_action.triggered.connect(self.save_as)
+        add_trade_action.triggered.connect(self.add_trade)
 
-        self.button_bar_layout.addWidget(self.new_button)
-        self.button_bar_layout.addWidget(self.load_button)
-        self.button_bar_layout.addWidget(self.save_button)
-        self.button_bar_layout.addWidget(self.save_as_button)
-        self.button_bar_layout.addWidget(self.add_button)
+        # Add actions to Toolbar
+        toolbar.addAction(new_action)
+        toolbar.addAction(load_action)
+        toolbar.addAction(save_action)
+        toolbar.addAction(save_as_action)
+        toolbar.addAction(add_trade_action)
 
-        self.main_layout.addWidget(self.button_bar)
+        # Spacer widget
+        spacer = QWidget()
+        spacer.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        toolbar.addWidget(spacer)
+
+        # Right-aligned actions
+        help_action = QAction("?", self)
+        donate_action = QAction("Donate", self)
+
+        # Adding actions to the right
+        toolbar.addAction(help_action)
+        toolbar.addAction(donate_action)
+
+        # Connect actions
+        help_action.triggered.connect(self.help)
+        donate_action.triggered.connect(self.donate)
 
     def setup_tables(self):
         # Main container for all tables and their titles
@@ -216,12 +233,12 @@ class MainWindow(QMainWindow):
         if file_path is None:
             file_path, _ = QFileDialog.getOpenFileName(self, "Open JSON File", "", "JSON files (*.json)")
 
-        if not self.check_data_file_version(file_path):
-            return
-
         self.save_last_used_file_path(file_path)
 
         if self.file_path:
+            if not self.check_data_file_version(file_path):
+                return
+
             try:
                 with open(self.file_path, 'r') as file:
                     data = json.load(file)
@@ -254,7 +271,8 @@ class MainWindow(QMainWindow):
 
     def save_as(self):
         file_path, _ = QFileDialog.getSaveFileName(self, "Save JSON File", "", "JSON files (*.json)")
-        self.save_data(file_path)
+        if file_path:
+            self.save_data(file_path)
 
     def save_data(self, file_path):
         self.check_data_file_version(file_path)
@@ -606,6 +624,12 @@ class MainWindow(QMainWindow):
             QMessageBox.critical(self, "Error", f"Wrong file version: {file_path} - {data["version"]} instead of {DATA_FILE_VERSION}")
             return False
             # Eventually add migration to future versions
+
+    def help(self):
+        pass
+
+    def donate(self):
+        pass
 
 
 if __name__ == "__main__":
