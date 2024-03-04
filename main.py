@@ -2,7 +2,7 @@ import os
 import sys
 import json
 from decimal import Decimal, ROUND_HALF_UP
-from PyQt6.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QTableWidget, QHeaderView, QFileDialog, QMessageBox, QLabel, QLineEdit, QTableWidgetItem, QAbstractItemView, QStyle, QCheckBox, QToolBar, QSizePolicy
+from PyQt6.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QTableWidget, QHeaderView, QFileDialog, QMessageBox, QLabel, QLineEdit, QTableWidgetItem, QAbstractItemView, QStyle, QCheckBox, QToolBar, QSizePolicy, QDialog, QPushButton
 from PyQt6.QtCore import Qt, QEvent
 from PyQt6.QtGui import QShortcut, QKeySequence, QIcon, QPixmap, QAction
 
@@ -620,7 +620,36 @@ class MainWindow(QMainWindow):
             # Eventually add migration to future versions
 
     def help(self):
-        pass
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Help")
+        dialog.setFixedSize(400, 300)
+
+        layout = QVBoxLayout()
+
+        help_text = """
+        <b>Tip:</b> Selecting a position before adding a new trade auto-fills the pair.</b><br><br>
+        <b>Program Shortcuts:</b><br><br>
+        - <b>F1:</b> Help<br><br>
+        - <b>Ctrl+N:</b> New File<br>
+        - <b>Ctrl+O:</b> Open File<br>
+        - <b>Ctrl+S:</b> Save<br>
+        - <b>Ctrl+Shift+S:</b> Save As<br>
+        <br>
+        - <b>Ctrl+Z:</b> Undo<br>
+        - <b>Ctrl+Y:</b> Redo
+        """
+
+        help_label = QLabel(help_text)
+        help_label.setTextFormat(Qt.TextFormat.RichText)  # To enable HTML styling
+        layout.addWidget(help_label)
+
+        # Close button
+        close_button = QPushButton("Close")
+        close_button.clicked.connect(dialog.accept)
+        layout.addWidget(close_button)
+
+        dialog.setLayout(layout)
+        dialog.exec()
 
 
 if __name__ == "__main__":
