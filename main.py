@@ -3,7 +3,7 @@ import sys
 import json
 from decimal import Decimal, ROUND_HALF_UP
 from PyQt6.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QTableWidget, QHeaderView, QFileDialog, QMessageBox, QLabel, QLineEdit, QTableWidgetItem, QAbstractItemView, QStyle, QCheckBox, QToolBar, QSizePolicy, QDialog, QPushButton
-from PyQt6.QtCore import Qt, QEvent
+from PyQt6.QtCore import Qt, QEvent, QCoreApplication, QSettings
 from PyQt6.QtGui import QShortcut, QKeySequence, QIcon, QPixmap, QAction
 
 from decimal_table_widget_item import DecimalTableWidgetItem
@@ -17,7 +17,7 @@ from constants import red, green
 
 CRYPTO_TRADES_TRACKER_VERSION = '1.0.0'
 DATA_FILE_VERSION = '1'
-SETTINGS_FILE = 'ctt_settings.json'
+SETTINGS_FILE = 'ctt_settings.ini'
 
 UUIDRole = Qt.ItemDataRole.UserRole + 1
 
@@ -51,7 +51,7 @@ class MainWindow(QMainWindow):
         self.setup_shortcuts()
 
         # Load settings
-        self.load_settings()
+        self.read_settings()
 
         # Load last data
         self.load_last_used_file()
@@ -433,54 +433,17 @@ class MainWindow(QMainWindow):
         self.positions_table.setSortingEnabled(True)
 
     def save_last_used_file_path(self, file_path):
-        try:
-            # Attempt to read existing settings
-            with open(SETTINGS_FILE, 'r') as f:
-                data = json.load(f)
-        except (FileNotFoundError, json.JSONDecodeError):
-            # If the file doesn't exist or is not valid JSON, start fresh
-            data = {}
-
-        # Update the last file path setting
-        data['last_file_path'] = file_path
-
-        # Write the updated settings back to the file
-        with open(SETTINGS_FILE, 'w') as f:
-            json.dump(data, f, indent=2, cls=DecimalEncoder)
-            self.file_path = file_path
-
-    def load_settings(self):
-        try:
-            with open(SETTINGS_FILE, 'r') as f:
-                data = json.load(f)
-        except (FileNotFoundError, json.JSONDecodeError):
-            # If the file doesn't exist or is not valid JSON, start fresh
-            data = {}
-        except Exception as e:
-            print("Error loading settings file:", e)
-            return
-
-        version = data.get('version', '')
-        if not version:
-            data['version'] = CRYPTO_TRADES_TRACKER_VERSION
-            with open(SETTINGS_FILE, 'w') as f:
-                json.dump(data, f, indent=2, cls=DecimalEncoder)
-        elif version != CRYPTO_TRADES_TRACKER_VERSION:
-            QMessageBox.critical(self, "Error", f"Settings version: {version}\nCurrent version: {CRYPTO_TRADES_TRACKER_VERSION}")
+        self.file_path = file_path
+        settings = QSettings(SETTINGS_FILE, QSettings.Format.IniFormat)
+        settings.setValue("lastUsedFile", self.file_path)
 
     def load_last_used_file(self):
-        try:
-            with open(SETTINGS_FILE, 'r') as f:
-                data = json.load(f)
-            self.file_path = data.get('last_file_path', '')
-            if self.file_path:
-                self.load_data(self.file_path)
-            else:
-                self.load_changes_with_prompt()
-            self.update_data()
-            self.update_title()
-        except Exception as e:
-            print("Error loading last used file:", e)
+        if self.file_path:
+            self.load_data(self.file_path)
+        else:
+            self.load_changes_with_prompt()
+        self.update_data()
+        self.update_title()
 
     def load_changes_with_prompt(self):
         self.change_log.load(self.file_path)
@@ -565,14 +528,33 @@ class MainWindow(QMainWindow):
 
             if response == QMessageBox.StandardButton.Yes:
                 self.save()
-                event.accept()
             elif response == QMessageBox.StandardButton.No:
                 self.change_log.clear_not_applied(self.file_path)
-                event.accept()
-            else:
-                event.ignore()
-        else:
-            event.accept()
+
+        self.write_settings()
+        super().closeEvent(event)
+
+    def write_settings(self):
+        settings = QSettings(SETTINGS_FILE, QSettings.Format.IniFormat)
+        settings.setValue("version", CRYPTO_TRADES_TRACKER_VERSION)
+        settings.setValue("lastUsedFile", self.file_path)
+        settings.setValue("geometry", self.saveGeometry())
+        settings.setValue("windowState", self.saveState())
+
+    def read_settings(self):
+        settings = QSettings(SETTINGS_FILE, QSettings.Format.IniFormat)
+        filename = settings.fileName()
+        version = settings.value("version")
+        if version and version != CRYPTO_TRADES_TRACKER_VERSION:
+            # Merge with new version???
+            QMessageBox.critical(self, "Error", f"Settings version: {version}\nCurrent version: {CRYPTO_TRADES_TRACKER_VERSION}")
+        self.file_path = settings.value("lastUsedFile")
+        geometry = settings.value("geometry")
+        if geometry:
+            self.restoreGeometry(geometry)
+        window_state = settings.value("windowState")
+        if geometry:
+            self.restoreState(window_state)
 
     def undo_last_change(self):
         last_change = self.change_log.get_last_to_undo()
@@ -655,6 +637,9 @@ class MainWindow(QMainWindow):
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     app.setStyle("Fusion")
+
+    QCoreApplication.setOrganizationName("Valtrius")
+    QCoreApplication.setApplicationName("CryptoTradesTracker")
 
     window = MainWindow()
     window.show()

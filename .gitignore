@@ -1,5 +1,6 @@
 /*.spec
 /*.json
+/*.ini
 /dist
 /build
 /.idea
