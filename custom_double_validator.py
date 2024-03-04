@@ -3,7 +3,7 @@ from PyQt6.QtCore import QLocale
 
 
 class CustomDoubleValidator(QDoubleValidator):
-    def __init__(self, bottom=float('-inf'), top=float('inf'), decimals=2, parent=None):
+    def __init__(self, bottom=float('-inf'), top=float('inf'), decimals=8, parent=None):
         super().__init__(bottom, top, decimals, parent)
         self.setLocale(QLocale(QLocale.Language.English, QLocale.Country.UnitedStates))
 

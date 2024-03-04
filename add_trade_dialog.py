@@ -1,3 +1,4 @@
+from PyQt6.QtCore import QTimer
 from PyQt6.QtGui import QPalette
 from PyQt6.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QLineEdit, QPushButton, QMessageBox, QTableWidget, QHeaderView, QComboBox
 from datetime import datetime
@@ -26,6 +27,7 @@ class AddTradeDialog(QDialog):
         btn_layout = QHBoxLayout()
         ok_button = QPushButton("OK")
         ok_button.clicked.connect(self.validate_and_save_trade)
+        ok_button.setDefault(True)
         cancel_button = QPushButton("Cancel")
         cancel_button.clicked.connect(self.reject)
 
@@ -45,6 +47,8 @@ class AddTradeDialog(QDialog):
         table.verticalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
         table.verticalHeader().setVisible(False)
         self.setup_row(table, 0, pair)
+        if pair:
+            QTimer.singleShot(0, lambda: table.cellWidget(0, 3).setFocus())
         return table
 
     def setup_row(self, table, row, pair):
@@ -71,9 +75,13 @@ class AddTradeDialog(QDialog):
                 line_edit = QLineEdit()
                 if col == 1 and pair:
                     line_edit.setText(pair)
+                elif col == 3:
+                    line_edit.setPlaceholderText("YYYY-MM-DD")
                 table.setCellWidget(row, col, line_edit)
 
         self.update_row_color(table, row, combo_box.currentText())
+        if not pair:
+            QTimer.singleShot(0, lambda: table.cellWidget(row, 1).setFocus())
 
     def add_row(self):
         row_index = self.table.rowCount()
