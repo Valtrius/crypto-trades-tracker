@@ -78,7 +78,6 @@ class MainWindow(QMainWindow):
         save_as_action = QAction("Save As...", self)
         add_trade_action = QAction("Add Trade", self)
         help_action = QAction("?", self)
-        donate_action = QAction("Donate", self)
 
         # Shortcuts
         new_action.setShortcut(QKeySequence.StandardKey.New)
@@ -94,7 +93,6 @@ class MainWindow(QMainWindow):
         save_as_action.triggered.connect(self.save_as)
         add_trade_action.triggered.connect(self.add_trade)
         help_action.triggered.connect(self.help)
-        donate_action.triggered.connect(self.donate)
 
         # Left-aligned actions
         toolbar.addAction(new_action)
@@ -110,7 +108,6 @@ class MainWindow(QMainWindow):
 
         # Right-aligned actions
         toolbar.addAction(help_action)
-        toolbar.addAction(donate_action)
 
     def setup_tables(self):
         # Main container for all tables and their titles
@@ -623,9 +620,6 @@ class MainWindow(QMainWindow):
             # Eventually add migration to future versions
 
     def help(self):
-        pass
-
-    def donate(self):
         pass
 
 
