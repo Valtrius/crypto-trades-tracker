@@ -10,6 +10,9 @@ from custom_double_validator import CustomDoubleValidator
 
 class EditTradeDialog(QDialog):
     def __init__(self, trade_data, uuid, parent=None):
+        """
+        Initialize the dialog for editing a trade with the provided trade data and UUID.
+        """
         super().__init__(parent)
         self.setWindowTitle(f"Edit trade")
         self.setFixedSize(600, 220)
@@ -47,6 +50,9 @@ class EditTradeDialog(QDialog):
         layout.addLayout(btn_layout)
 
     def create_table(self, trade_data, read_only=False):
+        """
+        Create a table for displaying trade data. If read_only is False, the table is editable; otherwise, it's read-only.
+        """
         table = QTableWidget(1, 5)  # Single row, 5 columns
         table.setHorizontalHeaderLabels(["Pair", "Side", "Date", "Quantity", "Price"])
         table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
@@ -84,6 +90,9 @@ class EditTradeDialog(QDialog):
         return table
 
     def update_row_color(self, table, row, text):
+        """
+        Update the row color in the table based on the text value. The row color is green for 'Buy', red for 'Sell', and light gray otherwise.
+        """
         color = green if text == 'Buy' else red if text == 'Sell' else light_gray
 
         for col in range(table.columnCount()):
@@ -94,6 +103,9 @@ class EditTradeDialog(QDialog):
                 widget.setPalette(palette)
 
     def validate_and_save_trade(self):
+        """
+        Validate the trade data entered in the table cells and save it if valid. If any validation error occurs, display a critical message box.
+        """
         try:
             trade_id = self.uuid
             # First column (0) is "Pair", and it's a line edit widget

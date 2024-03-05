@@ -27,6 +27,9 @@ decimal_places = Decimal('1E-8')
 
 class MainWindow(QMainWindow):
     def __init__(self):
+        """
+        Initializes the main window of the application, setting its size, icon, and positioning it at the center of the screen. It also initializes the main layout, UI components, loads settings, the last used file, and installs an event filter.
+        """
         super().__init__()
         self.setGeometry(0, 0, 1280, 720)  # x, y, width, height
         icon = QIcon()
@@ -62,6 +65,9 @@ class MainWindow(QMainWindow):
         self.installEventFilter(self)
 
     def center_window(self):
+        """
+        Centers the window on the screen based on the current screen's resolution.
+        """
         # Get the screen's resolution
         screen = QApplication.primaryScreen().geometry()
         # Calculate the x and y positions to center the window
@@ -70,6 +76,9 @@ class MainWindow(QMainWindow):
         self.move(x, y)
 
     def setup_button_bar(self):
+        """
+        Configures the toolbar with actions for new file, open, save, save as, add trade, and help, including shortcuts and connections for their respective functionalities.
+        """
         toolbar = QToolBar("Main Toolbar")
         self.addToolBar(toolbar)
 
@@ -112,6 +121,9 @@ class MainWindow(QMainWindow):
         toolbar.addAction(help_action)
 
     def setup_tables(self):
+        """
+        Sets up the tables for displaying positions and trade history, including their layout, titles, filters, and clear button functionalities, and integrates them into the main layout of the application.
+        """
         # Main container for all tables and their titles
         self.tables_container = QWidget()
         self.tables_layout = QHBoxLayout(self.tables_container)
@@ -213,6 +225,9 @@ class MainWindow(QMainWindow):
         self.positions_table.setFocus()
 
     def setup_shortcuts(self):
+        """
+        Configures keyboard shortcuts for undo and redo actions within the application.
+        """
         # Undo shortcut: CTRL-Z
         undo_shortcut = QShortcut(QKeySequence('Ctrl+Z'), self)
         undo_shortcut.activated.connect(self.undo_last_change)
@@ -222,10 +237,16 @@ class MainWindow(QMainWindow):
         redo_shortcut.activated.connect(self.redo_next_change)
 
     def clear_filter(self, table_widget, filter_text_box):
+        """
+        Clears the filter text box and applies the updated (empty) filter to the specified table widget.
+        """
         filter_text_box.clear()
         self.filter_table(table_widget, filter_text_box.text())
 
     def load_data(self, file_path=None):
+        """
+        Loads trading data from a JSON file, updates the application's data structures, and refreshes the UI, handling any errors that occur during the file loading process.
+        """
         if file_path is None:
             file_path, _ = QFileDialog.getOpenFileName(self, "Open JSON File", "", "JSON files (*.json)")
 
@@ -252,6 +273,9 @@ class MainWindow(QMainWindow):
                 QMessageBox.critical(self, "Error", f"Error loading file: {e}")
 
     def new(self):
+        """
+        Resets the application to a new state, clearing historical data and any associated file path references.
+        """
         self.full_history_data = []
 
         self.save_last_used_file_path("")
@@ -260,17 +284,26 @@ class MainWindow(QMainWindow):
         self.update_title()
 
     def save(self):
+        """
+        Saves the current data to the existing file path, or prompts the user to select a file path if none is set.
+        """
         if self.file_path:
             self.save_data(self.file_path)
         else:
             self.save_as()
 
     def save_as(self):
+        """
+        Prompts the user to select a file path and saves the current data to the specified JSON file.
+        """
         file_path, _ = QFileDialog.getSaveFileName(self, "Save JSON File", "", "JSON files (*.json)")
         if file_path:
             self.save_data(file_path)
 
     def save_data(self, file_path):
+        """
+        Saves the current application data to a specified file path in JSON format, handling exceptions and updating the application title with the new file path.
+        """
         self.check_data_file_version(file_path)
 
         try:
@@ -284,6 +317,9 @@ class MainWindow(QMainWindow):
             QMessageBox.critical(self, "Error", f"Error saving file: {e}")
 
     def add_trade(self):
+        """
+        Opens a dialog to add a new trade, updates the change log with the new trade data, and refreshes the application's data and title.
+        """
         # Get the currently selected pair from positions_table
         selected_rows = self.positions_table.selectionModel().selectedRows()
         selected_pair = None
@@ -302,6 +338,9 @@ class MainWindow(QMainWindow):
         self.update_title()
 
     def edit_trade(self):
+        """
+        Opens a dialog to edit a selected trade, updates the change log if changes are made, and refreshes the displayed data and title.
+        """
         selected_items = self.history_table.selectedItems()
         if not selected_items:
             return
@@ -321,6 +360,9 @@ class MainWindow(QMainWindow):
         self.update_title()
 
     def delete_trade(self):
+        """
+        Deletes the selected trade(s) after confirmation, updates the change log, and refreshes the application data and title.
+        """
         selected_rows = self.history_table.selectionModel().selectedRows()
         if selected_rows:
             response = QMessageBox.question(self, "Delete Confirmation", "Are you sure you want to delete the selected trade(s)?", QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
@@ -348,6 +390,9 @@ class MainWindow(QMainWindow):
         self.update_title()
 
     def add_history_row(self, row):
+        """
+        Inserts a new row into the trade history table, including calculated trade value and color-coding based on the trade type, while also storing the trade's UUID.
+        """
         value = (Decimal(row[4]) * Decimal(row[5])).quantize(decimal_places, ROUND_HALF_UP)
 
         table_row = self.history_table.rowCount()
@@ -375,6 +420,9 @@ class MainWindow(QMainWindow):
             self.history_table.setItem(table_row, col_index - 1, item)
 
     def update_history(self, history_data):
+        """
+        Clears and repopulates the trade history table with provided data, temporarily disabling sorting to improve performance.
+        """
         self.history_table.setSortingEnabled(False)
         self.history_table.setRowCount(0)
 
@@ -384,6 +432,9 @@ class MainWindow(QMainWindow):
         self.history_table.setSortingEnabled(True)
 
     def update_positions(self, history_data):
+        """
+        Updates the positions table by calculating and displaying the accumulated quantity, average price, total value, and total profit/loss for each trading pair based on the provided trade history.
+        """
         self.positions_table.setSortingEnabled(False)
         self.positions_table.setRowCount(0)  # Clear existing rows
 
@@ -435,11 +486,17 @@ class MainWindow(QMainWindow):
         self.positions_table.setSortingEnabled(True)
 
     def save_last_used_file_path(self, file_path):
+        """
+        Stores the last used file path in the application settings for future access.
+        """
         self.file_path = file_path
         settings = QSettings(SETTINGS_FILE, QSettings.Format.IniFormat)
         settings.setValue("lastUsedFile", self.file_path)
 
     def load_last_used_file(self):
+        """
+        Loads data from the last used file path if available, otherwise prompts for changes, and updates the application's data and title accordingly.
+        """
         if self.file_path:
             self.load_data(self.file_path)
         else:
@@ -448,6 +505,9 @@ class MainWindow(QMainWindow):
         self.update_title()
 
     def load_changes_with_prompt(self):
+        """
+        Loads and prompts the user about unapplied changes from the change log, offering an option to recover or discard these modifications.
+        """
         self.change_log.load(self.file_path)
         if not self.change_log.all_applied():
             # Ask the user if they want to keep where they left off
@@ -464,6 +524,9 @@ class MainWindow(QMainWindow):
                 self.change_log.clear_not_applied(self.file_path)
 
     def filter_table(self, table_widget, filter_text, hide_closed=False):
+        """
+        Filters the rows of a given table widget based on a text filter and an option to hide rows with closed positions.
+        """
         for row in range(table_widget.rowCount()):
             item = table_widget.item(row, 0)
             quantity_item = table_widget.item(row, 1)
@@ -478,21 +541,19 @@ class MainWindow(QMainWindow):
             table_widget.setRowHidden(row, not show_row)
 
     def get_trade_id_from_row(self, row):
+        """
+        Retrieves the trade ID (UUID) stored in the first column of a specified row in the history table.
+        """
         # UUID is stored in the first column
         item = self.history_table.item(row, 0)
         if item:
             return item.data(UUIDRole)
         return None
 
-    def get_row_from_trade_id(self, trade_id):
-        row_count = self.history_table.rowCount()
-        for row in range(row_count):
-            item = self.history_table.item(row, 0)  # UUID is stored in the first column
-            if item and item.data(UUIDRole) == trade_id:
-                return row
-        return None
-
     def eventFilter(self, source, event):
+        """
+        Implements an event filter to clear table selections with the Escape key and to delete a trade with the Delete key when focused on the history table.
+        """
         if event.type() == QEvent.Type.KeyPress and event.key() == Qt.Key.Key_Escape:
             self.positions_table.clearSelection()
             self.history_table.clearSelection()
@@ -504,11 +565,17 @@ class MainWindow(QMainWindow):
         return super().eventFilter(source, event)  # Pass the event to the base class method
 
     def update_data(self):
+        """
+        Processes changes to the trade history, then updates both the history and positions tables with the processed data.
+        """
         processed_history = self.change_log.process(self.file_path, self.full_history_data)
         self.update_history(processed_history)
         self.update_positions(processed_history)
 
     def update_title(self):
+        """
+        Updates the window title to reflect the current state, including the version, loaded file name, and unsaved changes indicator.
+        """
         title = f"Crypto Trades Tracker - {CRYPTO_TRADES_TRACKER_VERSION}"
         if self.file_path:
             title += f" - {os.path.basename(self.file_path)}"
@@ -518,6 +585,9 @@ class MainWindow(QMainWindow):
         self.setWindowTitle(title)
 
     def closeEvent(self, event):
+        """
+        Handles the window's close event by prompting the user to save unapplied changes, clearing unapplied changes if chosen, and saving current settings before closing.
+        """
         # Check if there are unapplied changes
         if not self.change_log.all_applied():
             # Ask the user if they want to save the changes
@@ -537,6 +607,9 @@ class MainWindow(QMainWindow):
         super().closeEvent(event)
 
     def write_settings(self):
+        """
+        Saves the application's current settings, including version, last used file path, and window geometry and state, to a configuration file.
+        """
         settings = QSettings(SETTINGS_FILE, QSettings.Format.IniFormat)
         settings.setValue("version", CRYPTO_TRADES_TRACKER_VERSION)
         settings.setValue("lastUsedFile", self.file_path)
@@ -544,6 +617,9 @@ class MainWindow(QMainWindow):
         settings.setValue("windowState", self.saveState())
 
     def read_settings(self):
+        """
+        Reads and applies the application's saved settings, including last used file path and window geometry and state, with a version check for compatibility.
+        """
         settings = QSettings(SETTINGS_FILE, QSettings.Format.IniFormat)
         filename = settings.fileName()
         version = settings.value("version")
@@ -559,6 +635,9 @@ class MainWindow(QMainWindow):
             self.restoreState(window_state)
 
     def undo_last_change(self):
+        """
+        Undoes the last change in the change log after confirmation, then updates the data and title to reflect this action.
+        """
         last_change = self.change_log.get_last_to_undo()
         if last_change is not None:
             dialog = ConfirmChangeDialog(last_change, "undo")
@@ -569,6 +648,9 @@ class MainWindow(QMainWindow):
                 self.update_title()
 
     def redo_next_change(self):
+        """
+        Redoes the next change in the change log after confirmation, updating the data and title accordingly.
+        """
         next_change = self.change_log.get_next_to_redo()
         if next_change is not None:
             dialog = ConfirmChangeDialog(next_change, "redo")
@@ -579,6 +661,9 @@ class MainWindow(QMainWindow):
                 self.update_title()
 
     def check_data_file_version(self, file_path):
+        """
+        Checks and updates the version of the data file, ensuring compatibility or initializing the file if necessary, and handles version mismatch errors.
+        """
         # Try to read the existing data
         try:
             with open(file_path, 'r') as file:
@@ -604,6 +689,9 @@ class MainWindow(QMainWindow):
             # Eventually add migration to future versions
 
     def help(self):
+        """
+        Displays a help dialog with instructions and keyboard shortcuts for the application.
+        """
         dialog = QDialog(self)
         dialog.setWindowTitle("Help")
         dialog.setFixedSize(400, 300)

@@ -8,6 +8,9 @@ from constants import red, green, light_gray
 
 class ConfirmChangeDialog(QDialog):
     def __init__(self, change_data, change_string, parent=None):
+        """
+        Initializes a confirmation dialog for a change operation, displaying the details of the change for user confirmation.
+        """
         super().__init__(parent)
         self.setWindowTitle(f"Confirm {change_string}")
         self.setFixedSize(600, 230)
@@ -65,6 +68,9 @@ class ConfirmChangeDialog(QDialog):
         layout.addLayout(btn_layout)
 
     def create_table(self, change_data):
+        """
+        Creates a table widget to display change details in the confirmation dialog.
+        """
         table = QTableWidget(1, 5)  # Single row, 5 columns
         table.setHorizontalHeaderLabels(["Pair", "Side", "Date", "Quantity", "Price"])
         table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
@@ -95,4 +101,7 @@ class ConfirmChangeDialog(QDialog):
         return table
 
     def get_result(self):
+        """
+        Returns True if the user accepted the dialog, False otherwise.
+        """
         return self.exec() == QDialog.DialogCode.Accepted

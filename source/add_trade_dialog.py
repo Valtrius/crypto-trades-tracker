@@ -11,6 +11,9 @@ from custom_double_validator import CustomDoubleValidator
 
 class AddTradeDialog(QDialog):
     def __init__(self, parent=None, pair=None):
+        """
+        Initializes the dialog window for adding a new trade with specified parent and pair, and sets up its layout.
+        """
         super().__init__(parent)
         self.setWindowTitle(f"Add new trade")
         self.setFixedSize(600, 100)
@@ -37,6 +40,9 @@ class AddTradeDialog(QDialog):
         layout.addLayout(btn_layout)
 
     def create_table(self, pair):
+        """
+        Creates a QTableWidget for displaying trade details, initializes its headers, column widths, and initial row setup.
+        """
         table = QTableWidget(1, 7)
         table.setHorizontalHeaderLabels(["", "Pair", "Side", "Date", "Quantity", "Price", ""])
         table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
@@ -52,6 +58,9 @@ class AddTradeDialog(QDialog):
         return table
 
     def setup_row(self, table, row, pair):
+        """
+        Sets up a row in the QTableWidget with appropriate widgets and validators for each column.
+        """
         double_validator = CustomDoubleValidator()
         for col in range(0, 7):
             if col == 0:
@@ -84,6 +93,9 @@ class AddTradeDialog(QDialog):
             QTimer.singleShot(0, lambda: table.cellWidget(row, 1).setFocus())
 
     def add_row(self):
+        """
+        Adds a new row to the QTableWidget and sets up the widgets for the new row.
+        """
         row_index = self.table.rowCount()
         self.table.setCellWidget(row_index - 1, 0, None)
         self.table.insertRow(row_index)
@@ -93,6 +105,9 @@ class AddTradeDialog(QDialog):
         self.adjust_dialog_height()
 
     def delete_row(self, row_index):
+        """
+        Deletes the specified row from the QTableWidget and adjusts the dialog height if necessary.
+        """
         row_count = self.table.rowCount()
         if row_count != 1:
             self.table.removeRow(row_index)
@@ -103,13 +118,18 @@ class AddTradeDialog(QDialog):
             self.table.setCellWidget(row_index - 1, 0, button)
 
     def adjust_dialog_height(self):
-        # Adjust the dialog's height based on the number of rows
-        row_height = 23  # Assuming a fixed row height, adjust as needed
+        """
+        Adjusts the height of the dialog based on the number of rows in the QTableWidget.
+        """
+        row_height = 23
         base_height = 100
         new_height = base_height + row_height * (self.table.rowCount() - 1)
         self.setFixedHeight(new_height)
 
     def update_row_color(self, table, row, text):
+        """
+        Updates the background color of the row based on the text value ('Buy' or 'Sell').
+        """
         color = green if text == 'Buy' else red if text == 'Sell' else light_gray
 
         for col in range(1, 7):
@@ -120,6 +140,9 @@ class AddTradeDialog(QDialog):
                 widget.setPalette(palette)
 
     def validate_and_save_trade(self):
+        """
+        Validates and saves trade data entered in the dialog. Raises a critical QMessageBox if validation fails.
+        """
         self.new_data = []
 
         try:

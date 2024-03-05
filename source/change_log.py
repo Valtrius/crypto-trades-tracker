@@ -8,12 +8,21 @@ CHANGE_LOG_VERSION = '1'
 
 class ChangeLog:
     def __init__(self):
+        """
+        Initializes the object with an empty list to track changes.
+        """
         self.changes = []
 
     def all_applied(self):
+        """
+        Determines if all changes in the list have been applied and not undone, returning True if so.
+        """
         return all(change.get('applied', True) != change.get('undone', True) for change in self.changes)
 
     def load(self, file_path):
+        """
+        Loads change log data from a file, handling version compatibility and data integrity, and initializes changes for the specific file path, creating or resetting the file if necessary.
+        """
         try:
             with open(CHANGE_LOG_FILE, 'r') as f:
                 data = json.load(f)
@@ -51,12 +60,18 @@ class ChangeLog:
             self.create_new_file(file_path)
 
     def create_new_file(self, file_path):
+        """
+        Creates a new change log file with the current version and an empty list of changes for the given file path.
+        """
         data = {"version": CHANGE_LOG_VERSION, file_path: []}
         with open(CHANGE_LOG_FILE, 'w') as f:
             json.dump(data, f, indent=2, cls=DecimalEncoder)
         self.changes = data[file_path]
 
     def add(self, file_path, change_type, original_data=None, new_data=None):
+        """
+        Adds a new change to the change log, removing any undone changes, and saves the updated log for the given file path.
+        """
         self.changes = [change for change in self.changes if not change['undone']]
         self.changes.append({
             'change_type': change_type,
@@ -68,6 +83,9 @@ class ChangeLog:
         self.write_changes(file_path)
 
     def write_changes(self, file_path):
+        """
+        Writes the changes in the change log to a JSON file, storing them under the specified file path.
+        """
         try:
             with open(CHANGE_LOG_FILE, 'r') as f:
                 data = json.load(f)
@@ -83,6 +101,10 @@ class ChangeLog:
             json.dump(data, f, indent=2, cls=DecimalEncoder)
 
     def process(self, file_path, original_data, change_applied=False):
+        """
+        Processes the original data according to the changes recorded in the change log,
+        applying, unapplying, and pruning changes as necessary, and returns the processed data.
+        """
         processed_data = original_data.copy()
         applied_changes = []
 
@@ -128,12 +150,18 @@ class ChangeLog:
         return processed_data
 
     def clear_not_applied(self, file_path):
+        """
+        Clears all unapplied changes in the change log for the specified file path.
+        """
         for change in self.changes:
             if not change.get('applied', False):
                 change['undone'] = True
         self.write_changes(file_path)
 
     def get_last_to_undo(self):
+        """
+        Returns the last change in the change log that has not been undone, which can be undone.
+        """
         # Iterate through self.changes in reverse to find the last change that has not been undone
         for change in reversed(self.changes):
             if not change.get('undone', False):
@@ -141,6 +169,9 @@ class ChangeLog:
         return None
 
     def get_next_to_redo(self):
+        """
+        Returns the next change in the change log that has been undone, which can be redone.
+        """
         # Iterate through self.changes to find the last change that has been undone
         for change in self.changes:
             if change.get('undone', True):
@@ -148,11 +179,17 @@ class ChangeLog:
         return None
 
     def undo(self):
+        """
+        Marks the last change in the change log that has not been undone as undone.
+        """
         last_change_to_undo = self.get_last_to_undo()
         if last_change_to_undo is not None:
             last_change_to_undo['undone'] = True
 
     def redo(self):
+        """
+        Marks the last change in the change log that has been undone as not undone, effectively redoing the change.
+        """
         last_change_to_undo = self.get_next_to_redo()
         if last_change_to_undo is not None:
             last_change_to_undo['undone'] = False
