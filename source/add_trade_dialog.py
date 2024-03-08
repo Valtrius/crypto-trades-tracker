@@ -2,7 +2,7 @@ from PyQt6.QtCore import QTimer
 from PyQt6.QtGui import QPalette
 from PyQt6.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QLineEdit, QPushButton, QMessageBox, QTableWidget, QHeaderView, QComboBox
 from datetime import datetime
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 import uuid
 
 from constants import red, green, light_gray
@@ -151,6 +151,8 @@ class AddTradeDialog(QDialog):
                 # First column (0) is "Pair", and it's a line edit widget
                 pair_cell_widget = self.table.cellWidget(row, 1)
                 pair = pair_cell_widget.text().upper()
+                if not pair:  # Check if pair is empty
+                    raise ValueError("Pair cannot be empty")
 
                 # Second column (1) is "Side", and it's a combobox widget
                 side_widget = self.table.cellWidget(row, 2)
@@ -163,10 +165,16 @@ class AddTradeDialog(QDialog):
 
                 # For "Quantity" and "Price", they are line edit widgets
                 quantity_cell_widget = self.table.cellWidget(row, 4)
-                quantity = Decimal(quantity_cell_widget.text().replace(" ", ""))
+                try:
+                    quantity = Decimal(quantity_cell_widget.text().replace(" ", ""))
+                except InvalidOperation:
+                    raise ValueError("Invalid quantity")
 
                 price_cell_widget = self.table.cellWidget(row, 5)
-                price = Decimal(price_cell_widget.text().replace(" ", ""))
+                try:
+                    price = Decimal(price_cell_widget.text().replace(" ", ""))
+                except InvalidOperation:
+                    raise ValueError("Invalid price")
 
                 self.new_data.append([trade_id, pair, side, date, quantity, price])
 
