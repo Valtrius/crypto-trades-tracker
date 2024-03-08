@@ -15,7 +15,7 @@ from datetime import datetime
 from confirm_change_dialog import ConfirmChangeDialog
 from constants import red, green
 
-CRYPTO_TRADES_TRACKER_VERSION = '1.0.0'
+CRYPTO_TRADES_TRACKER_VERSION = '1.0.1'
 DATA_FILE_VERSION = '1'
 SETTINGS_FILE = 'ctt_settings.ini'
 
