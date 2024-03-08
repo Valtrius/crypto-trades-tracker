@@ -621,10 +621,6 @@ class MainWindow(QMainWindow):
         Reads and applies the application's saved settings, including last used file path and window geometry and state, with a version check for compatibility.
         """
         settings = QSettings(SETTINGS_FILE, QSettings.Format.IniFormat)
-        version = settings.value("version")
-        if version and version != CRYPTO_TRADES_TRACKER_VERSION:
-            # Merge with new version???
-            QMessageBox.critical(self, "Error", f"Settings version: {version}\nCurrent version: {CRYPTO_TRADES_TRACKER_VERSION}")
         self.file_path = settings.value("lastUsedFile")
         geometry = settings.value("geometry")
         if geometry:
