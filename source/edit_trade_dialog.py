@@ -2,7 +2,7 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QPalette, QFont
 from PyQt6.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QPushButton, QMessageBox, QTableWidget, QHeaderView, QComboBox
 from datetime import datetime
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 
 from constants import red, green, light_gray
 from custom_double_validator import CustomDoubleValidator
@@ -111,6 +111,8 @@ class EditTradeDialog(QDialog):
             # First column (0) is "Pair", and it's a line edit widget
             pair_cell_widget = self.table.cellWidget(0, 0)
             pair = pair_cell_widget.text().upper()
+            if not pair:  # Check if pair is empty
+                raise ValueError("Pair cannot be empty")
 
             # Second column (1) is "Side", and it's a combobox widget
             side_widget = self.table.cellWidget(0, 1)
@@ -123,10 +125,16 @@ class EditTradeDialog(QDialog):
 
             # For "Quantity" and "Price", they are line edit widgets
             quantity_cell_widget = self.table.cellWidget(0, 3)
-            quantity = Decimal(quantity_cell_widget.text().replace(" ", ""))
+            try:
+                quantity = Decimal(quantity_cell_widget.text().replace(" ", ""))
+            except InvalidOperation:
+                raise ValueError("Invalid quantity")
 
             price_cell_widget = self.table.cellWidget(0, 4)
-            price = Decimal(price_cell_widget.text().replace(" ", ""))
+            try:
+                price = Decimal(price_cell_widget.text().replace(" ", ""))
+            except InvalidOperation:
+                raise ValueError("Invalid price")
 
             self.new_data = [trade_id, pair, side, date, quantity, price]
 
