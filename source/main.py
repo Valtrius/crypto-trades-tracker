@@ -311,6 +311,7 @@ class MainWindow(QMainWindow):
                 processed_history = self.change_log.process(self.file_path, self.full_history_data, True)
                 data = {"version": DATA_FILE_VERSION, "data": processed_history}
                 json.dump(data, file, indent=2, cls=DecimalEncoder)
+                self.full_history_data = processed_history
                 self.save_last_used_file_path(file_path)
                 self.update_title()
         except Exception as e:
