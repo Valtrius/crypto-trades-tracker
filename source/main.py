@@ -430,6 +430,7 @@ class MainWindow(QMainWindow):
         for row in history_data:
             self.add_history_row(row)
 
+        self.filter_table(self.history_table, self.history_filter_text_box.text())
         self.history_table.setSortingEnabled(True)
 
     def update_positions(self, history_data):
@@ -484,6 +485,7 @@ class MainWindow(QMainWindow):
                     item = QTableWidgetItem(str(value))
                 self.positions_table.setItem(row_position, col, item)
 
+        self.filter_table(self.positions_table, self.positions_filter_text_box.text(), self.hide_closed_positions_checkbox.isChecked())
         self.positions_table.setSortingEnabled(True)
 
     def save_last_used_file_path(self, file_path):
