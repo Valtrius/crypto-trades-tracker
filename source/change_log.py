@@ -130,13 +130,13 @@ class ChangeLog:
 
                 change['applied'] = change_applied
 
-            # Applied and not undone -> pruning
-            elif change['applied'] and not change['undone']:
-                applied_changes.append(change)
-
             # Applied and undone -> unapply
             elif change['applied'] and change['undone']:
                 change['applied'] = False
+
+            # Applied and not undone -> pruning
+            if change['applied'] and not change['undone']:
+                applied_changes.append(change)
 
             # Not applied and undone -> do nothing
 
