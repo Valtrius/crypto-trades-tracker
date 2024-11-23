@@ -204,7 +204,7 @@ class MainWindow(QMainWindow):
         self.history_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
         self.history_table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.history_table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
-        self.history_table.sortItems(0, Qt.SortOrder.AscendingOrder)
+        self.history_table.sortItems(2, Qt.SortOrder.DescendingOrder)
         self.history_table.installEventFilter(self)
         history_layout.addWidget(self.history_table)
 
